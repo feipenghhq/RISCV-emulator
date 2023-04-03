@@ -1,0 +1,19 @@
+# https://caiorss.github.io/C-Cpp-Notes/compiler-flags-options.html
+CFLAGS=-O3 -Wall -Werror -Wimplicit-fallthrough
+
+SRCS=$(wildcard src/*.c)
+HDRS=$(wildcard src/*.h)
+OBJS=$(patsubst src/%.c, obj/%.o, $(SRCS))
+CC=gcc
+
+rvemu: $(OBJS)
+	$(CC) $(CFLAGS) -lm -o $@ $^ $(LDFLASGS)
+
+$(OBJS): obj/%.o: src/%.c $(HDRS)
+	@mkdir -p $$(dirname $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+clean:
+	rm -rf rvemu obj/
+
+.PHONY: clean
