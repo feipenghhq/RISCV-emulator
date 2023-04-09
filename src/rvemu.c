@@ -1,8 +1,8 @@
-
-#include<stdio.h>
+#include "rvemu.h"
 
 int main (int argc, char **argv) {
 
-    printf(" Hello World!\n");
+    machine_t m;
+    machine_load_program(&m, argv[1]);
     return 0;
 }
