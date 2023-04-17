@@ -51,6 +51,14 @@ typedef struct {
     u16 e_shstrndx;         // Contains index of the section header table entry that contains the section names.
 } elf64_ehdr_t;
 
+// Program header type
+#define PT_LOAD 0x00000001
+
+// Program header flags
+#define PF_X 0x1
+#define PF_W 0x2
+#define PF_R 0x4
+
 /**
  * @brief Program header
  *
