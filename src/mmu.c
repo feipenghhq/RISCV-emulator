@@ -35,23 +35,24 @@ static int flags_to_mmap_prot(u32 flags) {
 }
 
 /**
- * @brief
+ * @brief load a segment in the ELF file to the host memory space
  *
- * @param mmu
- * @param phdr
- * @param fd
+ * @param mmu   a pointer to the mmu
+ * @param phdr  a pointer to the program header
+ * @param fd    file descriptor
  */
 static void mmu_load_segment(mmu_t *mmu, elf64_phdr_t *phdr, int fd) {
+    // get the page size of the host program
     int page_size = getpagesize();
     u64 offset = phdr->p_offset;
-    // Here we want to virtual address to be mapped to the host machine
+    // map the virtual address in the segment to the host machine
     u64 vaddr = TO_HOST(phdr->p_vaddr);
     // address and offset in mmap function needs to be page aligned
     u64 aligned_vaddr = ROUNDDOWN(vaddr, page_size);
     u64 filesz = phdr->p_filesz + (vaddr - aligned_vaddr);
     u64 memsz = phdr->p_memsz + (vaddr - aligned_vaddr);
     int prot = flags_to_mmap_prot(phdr->p_flags);
-    // map the files into memory
+    // map the segment to host memory
     u64 addr = (u64) mmap((void *) aligned_vaddr, filesz, prot, (MAP_PRIVATE | MAP_FIXED),
                           fd, ROUNDDOWN(offset, page_size));
     // make sure that the mapped address is the address we want
@@ -61,11 +62,14 @@ static void mmu_load_segment(mmu_t *mmu, elf64_phdr_t *phdr, int fd) {
     // the size exceeds the current page size.
     u64 remaining_bss = ROUNDUP(memsz, page_size) - ROUNDUP(filesz, page_size);
     if (remaining_bss > 0) {
-        u64 addr = (u64) mmap((void *) (aligned_vaddr + ROUNDUP(offset, page_size)), remaining_bss, prot,
+        u64 addr = (u64) mmap((void *) (aligned_vaddr + ROUNDUP(filesz, page_size)), remaining_bss, prot,
                               (MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED), -1, 0);
-        assert(addr == (aligned_vaddr + ROUNDUP(offset, page_size)));
+        assert(addr == (aligned_vaddr + ROUNDUP(filesz, page_size)));
     }
-    //
+    // memory mapping for guest in host.
+    // [ ELF      | host_alloc          ]
+    // [          | malloc              ]
+    // [          | base       | alloc  ]
     mmu->host_alloc = MAX(mmu->host_alloc, (aligned_vaddr + ROUNDUP(memsz, page_size)));
     mmu->base = mmu->alloc = TO_GUEST(mmu->host_alloc);
 }

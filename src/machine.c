@@ -1,5 +1,29 @@
 #include "rvemu.h"
 
+
+/**
+ * @brief execute multiple instructions till we hit a ecall
+ *
+ * @param m pointer to machine
+ * @return enum exit_reason_t
+ */
+enum exit_reason_t machine_step(machine_t *m) {
+    while(true) {
+        exec_block_interp(&m->state);
+
+        // continue execution if it is indirect branch or direct branch
+        if (m->state.exit_reason == indirect_branch || m->state.exit_reason == direct_branch) {
+            continue;
+        }
+
+        // break on ecall.
+        assert(m->state.exit_reason == ecall);
+        break;
+    }
+
+    return ecall;
+}
+
 /**
  * @brief Load the program into memory
  * @param m: pointer to a machine
