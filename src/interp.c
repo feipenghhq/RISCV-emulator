@@ -3,7 +3,7 @@
 typedef void (func_t)(state_t *, inst_t *);
 
 // function pointers array
-static func_t *funcs[] = {};
+//static func_t *funcs[] = {};
 
 /**
  * @brief execute the code by interpretation
@@ -24,7 +24,7 @@ void exec_block_interp(state_t *state) {
         inst_decode(&inst, raw_inst);
 
         // execute the instruction
-        funcs[inst.type](state, &inst);
+        //funcs[inst.type](state, &inst);
 
         // revert back register zero value.
         state->gp_regs[zero] = 0;

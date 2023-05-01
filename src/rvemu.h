@@ -91,7 +91,15 @@ typedef struct {
  *
  */
 enum inst_type_t {
-    inst_addi,
+    // RV32I Base Instruction Set
+    inst_lui, inst_auipc,
+    inst_jal, inst_jalr, inst_beq, inst_bne, inst_blt, inst_bge, inst_bltu, inst_bgeu,
+    inst_lb, inst_lh, inst_lw, inst_lbu, inst_lhu,
+    inst_sb, inst_sh, inst_sw,
+    inst_addi, inst_slti, inst_sltiu, inst_xori, inst_ori, inst_andi,
+    inst_slli, inst_srli, inst_srai,
+    inst_add, inst_sub, inst_sll, inst_slt, inst_sltu, inst_xor, inst_srl, inst_sra, inst_or, inst_and,
+    inst_fence, inst_ecall, inst_ebreak,
     num_insts,
 };
 
@@ -104,6 +112,7 @@ typedef struct {
     i8 rs1;
     i8 rs2;
     i32 imm;
+    i16 csr;
     enum inst_type_t type;
     bool rvc;
     bool cont;
