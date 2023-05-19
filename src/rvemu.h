@@ -73,8 +73,8 @@ enum exit_reason_t {
  */
 typedef struct {
     enum exit_reason_t exit_reason;
-    u64 gp_regs[32];      // RISCV 32 general purpose registers
-    u64 pc;                         // Program counter
+    u64 gp_regs[32];        // RISCV 32 general purpose registers
+    u64 pc;                 // Program counter
 } state_t;
 
 /**
@@ -92,14 +92,19 @@ typedef struct {
  */
 enum inst_type_t {
     // RV32I Base Instruction Set
-    inst_lui, inst_auipc,
-    inst_jal, inst_jalr, inst_beq, inst_bne, inst_blt, inst_bge, inst_bltu, inst_bgeu,
-    inst_lb, inst_lh, inst_lw, inst_lbu, inst_lhu,
-    inst_sb, inst_sh, inst_sw,
-    inst_addi, inst_slti, inst_sltiu, inst_xori, inst_ori, inst_andi,
-    inst_slli, inst_srli, inst_srai,
-    inst_add, inst_sub, inst_sll, inst_slt, inst_sltu, inst_xor, inst_srl, inst_sra, inst_or, inst_and,
-    inst_fence, inst_ecall, inst_ebreak,
+        // - implemented
+        inst_addi, inst_slti, inst_sltiu, inst_andi, inst_xori, inst_ori,
+        inst_slli, inst_srli, inst_srai,
+        inst_lui, inst_auipc,
+        inst_add, inst_slt, inst_sltu, inst_and, inst_or, inst_xor, inst_sll, inst_srl, inst_sub, inst_sra,
+        // - not implemented
+
+        inst_jal, inst_jalr, inst_beq, inst_bne, inst_blt, inst_bge, inst_bltu, inst_bgeu,
+        inst_lb, inst_lh, inst_lw, inst_lbu, inst_lhu,
+        inst_sb, inst_sh, inst_sw,
+
+        inst_fence, inst_ecall, inst_ebreak,
+    // Numbered instructions
     num_insts,
 };
 
