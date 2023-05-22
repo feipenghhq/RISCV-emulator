@@ -73,8 +73,13 @@ enum exit_reason_t {
  */
 typedef struct {
     enum exit_reason_t exit_reason;
-    u64 gp_regs[32];        // RISCV 32 general purpose registers
-    u64 pc;                 // Program counter
+    u64 gp_regs[num_gp_regs];   // RISCV 32 general purpose registers
+
+    u64 pc;                     // Program counter
+    u64 reenter_pc;             // Re-enter Program counter
+
+    bool raise_exception;       // exception happens
+    u32  exception_code;        // exception types
 } state_t;
 
 /**
@@ -87,25 +92,30 @@ typedef struct {
 } machine_t;
 
 /**
- * @brief RISCV instructions
+ * @brief RISC-V instructions
  *
  */
 enum inst_type_t {
     // RV32I Base Instruction Set
         // - implemented
-        inst_addi, inst_slti, inst_sltiu, inst_andi, inst_xori, inst_ori,
+        inst_addi, inst_slti, inst_sltiu, inst_andi, inst_ori, inst_xori,
         inst_slli, inst_srli, inst_srai,
         inst_lui, inst_auipc,
         inst_add, inst_slt, inst_sltu, inst_and, inst_or, inst_xor, inst_sll, inst_srl, inst_sub, inst_sra,
-        // - not implemented
-
-        inst_jal, inst_jalr, inst_beq, inst_bne, inst_blt, inst_bge, inst_bltu, inst_bgeu,
+        inst_jal, inst_jalr, inst_beq, inst_bne, inst_blt, inst_bltu, inst_bge, inst_bgeu,
         inst_lb, inst_lh, inst_lw, inst_lbu, inst_lhu,
         inst_sb, inst_sh, inst_sw,
-
         inst_fence, inst_ecall, inst_ebreak,
     // Numbered instructions
     num_insts,
+};
+
+/**
+ * @brief RISC-V Exceptions
+ *
+ */
+enum exception_type_t {
+    instruction_address_misaligned = 0, // FIXME: assign to the actual exception number
 };
 
 /**

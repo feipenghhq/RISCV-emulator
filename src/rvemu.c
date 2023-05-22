@@ -12,6 +12,7 @@ int main (int argc, char **argv) {
     while(true) {
         enum exit_reason_t reason = machine_step(&machine);
         assert(reason == ecall);
+        machine.state.exit_reason = none; // reset the exit_reason
     }
 
     printf("ELF info (in host memory space)\n");

@@ -13,6 +13,7 @@ enum exit_reason_t machine_step(machine_t *m) {
 
         // continue execution if it is indirect branch or direct branch
         if (m->state.exit_reason == indirect_branch || m->state.exit_reason == direct_branch) {
+            m->state.exit_reason = none;    // reset the exit_reason
             continue;
         }
 

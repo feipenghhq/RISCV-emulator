@@ -17,6 +17,7 @@
 #define FUNCT3(data)    (((data) >> 12) & 0x7)
 #define FUNCT7(data)    (((data) >> 25) & 0x7F)
 #define IMM116(data)    (((data) >> 26) & 0x3F)
+#define INST31_20(data) (((data) >> 20) & 0xFFF)
 
 /////////////////////////////////////////
 // Functions to decode instruction
@@ -147,6 +148,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
     u8 opcode = OPCODE(raw_inst);
     u8 funct3 = FUNCT3(raw_inst);
     u8 funct7 = FUNCT7(raw_inst);
+    u16 inst_31_20 = INST31_20(raw_inst);
 
     switch(quadrant) {
         case 0x0: fatal("unimplemented");
@@ -256,13 +258,15 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                 }
 
                 case 0x3: {
-                    fatal("unimplemented fence instruction");
+                    inst->type = inst_fence; return;        // RV32I - FENCE
                 }
 
                 case 0x1C: {
-                    fatal("unimplemented ecall/ebreak instruction");
+                    if      (inst_31_20 == 0x0) {inst->type = inst_ecall; return;}  // RV32I - ECALL
+                    else if (inst_31_20 == 0x1) {inst->type = inst_ebreak; return;} // RV32I - EBREAK
+                    else                        {fatal("unimplemented");}
                 }
-
+                
                 default: fatal("unimplemented");
             }
 
