@@ -6,7 +6,7 @@ typedef void (func_t)(state_t *, inst_t *);
 // Functions to execute instruction
 /////////////////////////////////////////
 
-// ADDI/SLTI(U)/ANDI/ORI/XORI
+// ADDI/SLTI(U)/ANDI/ORI/XORI/ADDIW
 
     // Macros for i-type instruction
     #define EXEC_MACRO(type, op) state->gp_regs[inst->rd] = (type) state->gp_regs[inst->rs1] op (type) inst->imm \
@@ -42,27 +42,47 @@ typedef void (func_t)(state_t *, inst_t *);
         EXEC_MACRO(u64, ^);
     }
 
+    // addi instruction
+    static void exec_addiw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i32, +);
+    }
+
     #undef EXEC_MACRO
 
-// SLLI/SRLI/SRAI
+// SLLI/SRLI/SRAI/SLLIW/SRLIW/SRAIW
 
     // Macros for shift instruction
-    #define EXEC_MACRO(type, op) state->gp_regs[inst->rd] = (type) state->gp_regs[inst->rs1] op (inst->imm & 0x1F) \
+    #define EXEC_MACRO(type, op, mask) state->gp_regs[inst->rd] = (type) state->gp_regs[inst->rs1] op (inst->imm & (mask)) \
 
 
     // slli instruction
     static void exec_slli(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, <<);
+        EXEC_MACRO(i64, <<, 0x3F);
     }
 
     // srli instruction
     static void exec_srli(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, >>);
+        EXEC_MACRO(u64, >>, 0x3F);
     }
 
     // srai instruction
     static void exec_srai(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, >>);
+        EXEC_MACRO(i64, >>, 0x3F);
+    }
+
+    // slliw instruction
+    static void exec_slliw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i32, <<, 0x1F);
+    }
+
+    // srliw instruction
+    static void exec_srliw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(u32, >>, 0x1F);
+    }
+
+    // sraiw instruction
+    static void exec_sraiw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i32, >>, 0x1F);
     }
 
     #undef EXEC_MACRO
@@ -79,11 +99,11 @@ typedef void (func_t)(state_t *, inst_t *);
         state->gp_regs[inst->rd] = (i64) inst->imm + state->pc;
     }
 
-// ADD/SLT/SLTU/AND/OR/XOR/SUB
+// ADD/SLT/SLTU/AND/OR/XOR/SUB/ADDW/SUBW
 
     // Macros for r-type instruction
     #define EXEC_MACRO(type, op) \
-        state->gp_regs[inst->rd] = (type) state->gp_regs[inst->rs1] op (type) state->gp_regs[inst->rs2] \
+        state->gp_regs[inst->rd] =(i64) (type) state->gp_regs[inst->rs1] op (type) state->gp_regs[inst->rs2] \
 
 
     // add instruction
@@ -121,31 +141,56 @@ typedef void (func_t)(state_t *, inst_t *);
         EXEC_MACRO(u64, -);
     }
 
+    // addw instruction
+    static void exec_addw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i32, +);
+    }
+
+    // subw instruction
+    static void exec_subw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(u32, -);
+    }
+
     #undef EXEC_MACRO
 
-// SLL/SRL/SRA
+// SLL/SRL/SRA/SLLW/SRLW/SRAW
 
     // Macros for shift instruction
-    #define EXEC_MACRO(type, op) \
-        state->gp_regs[inst->rd] = (type) state->gp_regs[inst->rs1] op (state->gp_regs[inst->rs2] & 0x1F) \
-
+    #define EXEC_MACRO(type, op, mask) \
+        state->gp_regs[inst->rd] = (type) state->gp_regs[inst->rs1] op (state->gp_regs[inst->rs2] & mask) \
 
     // sll instruction
     static void exec_sll(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, <<);
+        EXEC_MACRO(u64, <<, 0x3F);
     }
 
     // srl instruction
     static void exec_srl(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, >>);
+        EXEC_MACRO(u64, >>, 0x3F);
     }
 
     // sra instruction
     static void exec_sra(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, >>);
+        EXEC_MACRO(i64, >>, 0x3F);
+    }
+
+    // sllw instruction
+    static void exec_sllw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(u32, <<, 0x1F);
+    }
+
+    // srlw instruction
+    static void exec_srlw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(u32, >>, 0x1F);
+    }
+
+    // sraw instruction
+    static void exec_sraw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i32, >>, 0x1F);
     }
 
     #undef EXEC_MACRO
+
 
 // JAL/JALR
 
@@ -209,7 +254,7 @@ typedef void (func_t)(state_t *, inst_t *);
 
     #undef EXEC_MACRO
 
-// LB/LH/LW/LBU/LHU
+// LB/LH/LW/LD/LBU/LHU/LWU
 
     #define EXEC_MACRO(type) \
         u64 address = state->gp_regs[inst->rs1] + (i64) inst->imm; \
@@ -228,6 +273,10 @@ typedef void (func_t)(state_t *, inst_t *);
         EXEC_MACRO(i32);
     }
 
+    static void exec_ld(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i64);
+    }
+
     static void exec_lbu(state_t *state, inst_t *inst) {
         EXEC_MACRO(u8);
     }
@@ -236,9 +285,13 @@ typedef void (func_t)(state_t *, inst_t *);
         EXEC_MACRO(u16);
     }
 
+    static void exec_lwu(state_t *state, inst_t *inst) {
+        EXEC_MACRO(u32);
+    }
+
     #undef EXEC_MACRO
 
-// SB/SH/SW/
+// SB/SH/SW/SD
 
     #define EXEC_MACRO(type) \
         u64 address = state->gp_regs[inst->rs1] + (i64) inst->imm; \
@@ -255,6 +308,10 @@ typedef void (func_t)(state_t *, inst_t *);
 
     static void exec_sw(state_t *state, inst_t *inst) {
         EXEC_MACRO(i32);
+    }
+
+    static void exec_sd(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i64);
     }
 
     #undef EXEC_MACRO
@@ -278,34 +335,15 @@ typedef void (func_t)(state_t *, inst_t *);
 /////////////////////////////////////////
 
 static func_t *funcs[] = {
-    exec_addi,
-    exec_slti,
-    exec_sltiu,
-    exec_andi,
-    exec_ori,
-    exec_xori,
-    exec_slli,
-    exec_srli,
-    exec_srai,
     exec_lui,
     exec_auipc,
-    exec_add,
-    exec_slt,
-    exec_sltu,
-    exec_and,
-    exec_or,
-    exec_xor,
-    exec_sll,
-    exec_srl,
-    exec_sub,
-    exec_sra,
     exec_jal,
     exec_jalr,
     exec_beq,
     exec_bne,
     exec_blt,
-    exec_bltu,
     exec_bge,
+    exec_bltu,
     exec_bgeu,
     exec_lb,
     exec_lh,
@@ -315,9 +353,43 @@ static func_t *funcs[] = {
     exec_sb,
     exec_sh,
     exec_sw,
+    exec_add,
+    exec_slt,
+    exec_sltu,
+    exec_addi,
+    exec_slti,
+    exec_sltiu,
+    exec_xori,
+    exec_ori,
+    exec_andi,
+    exec_slli,
+    exec_srli,
+    exec_srai,
+    exec_add,
+    exec_sub,
+    exec_sll,
+    exec_slt,
+    exec_sltu,
+    exec_xor,
+    exec_srl,
+    exec_sra,
+    exec_or,
+    exec_and,
     exec_fence,
     exec_ecall,
     exec_ebreak,
+    exec_lwu,
+    exec_ld,
+    exec_sd,
+    exec_addiw,
+    exec_slliw,
+    exec_srliw,
+    exec_sraiw,
+    exec_addw,
+    exec_subw,
+    exec_sllw,
+    exec_srlw,
+    exec_sraw,
 };
 
 /////////////////////////////////////////

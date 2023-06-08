@@ -96,16 +96,18 @@ typedef struct {
  *
  */
 enum inst_type_t {
-    // RV32I Base Instruction Set
-        // - implemented
-        inst_addi, inst_slti, inst_sltiu, inst_andi, inst_ori, inst_xori,
-        inst_slli, inst_srli, inst_srai,
-        inst_lui, inst_auipc,
-        inst_add, inst_slt, inst_sltu, inst_and, inst_or, inst_xor, inst_sll, inst_srl, inst_sub, inst_sra,
-        inst_jal, inst_jalr, inst_beq, inst_bne, inst_blt, inst_bltu, inst_bge, inst_bgeu,
-        inst_lb, inst_lh, inst_lw, inst_lbu, inst_lhu,
-        inst_sb, inst_sh, inst_sw,
-        inst_fence, inst_ecall, inst_ebreak,
+    // RV32I/RV64I Base Instruction Set
+    inst_lui, inst_auipc,
+    inst_jal, inst_jalr, inst_beq, inst_bne, inst_blt, inst_bge, inst_bltu, inst_bgeu,
+    inst_lb, inst_lh, inst_lw, inst_lbu, inst_lhu,
+    inst_sb, inst_sh, inst_sw,
+    inst_addi, inst_slti, inst_sltiu, inst_xori, inst_ori, inst_andi,
+    inst_slli, inst_srli, inst_srai,
+    inst_add, inst_sub, inst_sll, inst_slt, inst_sltu, inst_xor, inst_srl, inst_sra, inst_or, inst_and,
+    inst_fence, inst_ecall, inst_ebreak,
+    inst_lwu, inst_ld, inst_sd,
+    inst_addiw, inst_slliw, inst_srliw, inst_sraiw,
+    inst_addw, inst_subw, inst_sllw, inst_srlw, inst_sraw,
     // Numbered instructions
     num_insts,
 };
