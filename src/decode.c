@@ -234,6 +234,19 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         case 0x0: {
                             if      (funct7 == 0x0)  {inst->type = inst_add; return;} // RV32I - ADD
                             else if (funct7 == 0x20) {inst->type = inst_sub; return;} // RV32I - SUB
+                            else if (funct7 == 0x1)  { // RV32M
+                                switch (funct3) {
+                                    case 0x0: {inst->type = inst_mul;    return;}    // RV32M - MUL
+                                    case 0x1: {inst->type = inst_mulh;   return;}    // RV32M - MULH
+                                    case 0x2: {inst->type = inst_mulhsu; return;}    // RV32M - MULHSU
+                                    case 0x3: {inst->type = inst_mulhu;  return;}    // RV32M - MULHU
+                                    case 0x4: {inst->type = inst_div;    return;}    // RV32M - DIV
+                                    case 0x5: {inst->type = inst_divu;   return;}    // RV32M - DIVU
+                                    case 0x6: {inst->type = inst_rem;    return;}    // RV32M - REM
+                                    case 0x7: {inst->type = inst_remu;   return;}    // RV32M - REMU
+                                    default: fatalf("Invalid Instruction: %x", raw_inst);
+                                }
+                            }
                             else                     {fatal("Not a valid arithmetic instruction");}
                         }
                         case 0x1: inst->type = inst_sll;  return; // RV32I - SLL
@@ -262,6 +275,16 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         case 0x0: {
                             if      (funct7 == 0x0)  {inst->type = inst_addw; return;} // RV64I - ADDW
                             else if (funct7 == 0x20) {inst->type = inst_subw; return;} // RV64I - SUBW
+                            else if (funct7 == 0x1)  { // RV64M
+                                switch (funct3) {
+                                    case 0x0: {inst->type = inst_mulw;    return;}    // RV32M - MULW
+                                    case 0x4: {inst->type = inst_divw;    return;}    // RV32M - DIVW
+                                    case 0x5: {inst->type = inst_divuw;   return;}    // RV32M - DIVUW
+                                    case 0x6: {inst->type = inst_remw;    return;}    // RV32M - REMW
+                                    case 0x7: {inst->type = inst_remuw;   return;}    // RV32M - REMUW
+                                    default: fatalf("Invalid Instruction: %x", raw_inst);
+                                }
+                            }
                             else                     {fatalf("Invalid Instruction: %x", raw_inst);}
                         }
                         case 0x1: inst->type = inst_sllw;  return; // RV64I - SLLW

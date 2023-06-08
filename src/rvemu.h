@@ -108,6 +108,10 @@ enum inst_type_t {
     inst_lwu, inst_ld, inst_sd,
     inst_addiw, inst_slliw, inst_srliw, inst_sraiw,
     inst_addw, inst_subw, inst_sllw, inst_srlw, inst_sraw,
+    // RV32M/RV64M
+    inst_mul, inst_mulh, inst_mulhsu, inst_mulhu,
+    inst_div, inst_divu, inst_rem, inst_remu,
+    inst_mulw, inst_divw, inst_divuw, inst_remw, inst_remuw,
     // Numbered instructions
     num_insts,
 };

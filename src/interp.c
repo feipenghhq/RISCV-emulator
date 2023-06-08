@@ -316,6 +316,65 @@ typedef void (func_t)(state_t *, inst_t *);
 
     #undef EXEC_MACRO
 
+// MUL/MULH/MULHSU/MULHU/DIV/DIVU/REM/REMU/MULW/DIVW/DIVUW/REMW/REMUW
+
+    #define EXEC_MACRO(type, op) \
+        state->gp_regs[inst->rd] =(i64) (type) state->gp_regs[inst->rs1] op (type) state->gp_regs[inst->rs2] \
+
+    static void exec_mul(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i64, *);
+    }
+
+    static void exec_mulh(state_t *state, inst_t *inst) {
+        fatal("unimplemented MULH instructions");
+    }
+
+    static void exec_mulhsu(state_t *state, inst_t *inst) {
+        fatal("unimplemented MULHSU instructions");
+    }
+
+    static void exec_mulhu(state_t *state, inst_t *inst) {
+        fatal("unimplemented MULHU instructions");
+    }
+
+    static void exec_div(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i64, /);
+    }
+
+    static void exec_divu(state_t *state, inst_t *inst) {
+        EXEC_MACRO(u64, /);
+    }
+
+    static void exec_rem(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i64, %);
+    }
+
+    static void exec_remu(state_t *state, inst_t *inst) {
+        EXEC_MACRO(u64, %);
+    }
+
+    static void exec_mulw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i32, *);
+    }
+
+    static void exec_divw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i32, /);
+    }
+
+    static void exec_divuw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(u32, /);
+    }
+
+    static void exec_remw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(i32, %);
+    }
+
+    static void exec_remuw(state_t *state, inst_t *inst) {
+        EXEC_MACRO(u32, %);
+    }
+
+    #undef EXEC_MACRO
+
 // MISC instructions
 
     static void exec_fence(state_t *state, inst_t *inst) {
@@ -390,6 +449,19 @@ static func_t *funcs[] = {
     exec_sllw,
     exec_srlw,
     exec_sraw,
+    exec_mul,
+    exec_mulh,
+    exec_mulhsu,
+    exec_mulhu,
+    exec_div,
+    exec_divu,
+    exec_rem,
+    exec_remu,
+    exec_mulw,
+    exec_divw,
+    exec_divuw,
+    exec_remw,
+    exec_remuw,
 };
 
 /////////////////////////////////////////
