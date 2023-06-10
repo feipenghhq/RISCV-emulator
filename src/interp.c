@@ -6,88 +6,238 @@ typedef void (func_t)(state_t *, inst_t *);
 // Functions to execute instruction
 /////////////////////////////////////////
 
-// ADDI/SLTI(U)/ANDI/ORI/XORI/ADDIW
+    /////////////////////////////////////////
+    // Reg / Imm type instructions
+    /////////////////////////////////////////
 
-    // Macros for i-type instruction
-    #define EXEC_MACRO(type, op) state->gp_regs[inst->rd] = (type) state->gp_regs[inst->rs1] op (type) inst->imm \
-
+    #define FUNC(expr) \
+        i64 rs1 = state->gp_regs[inst->rs1]; \
+        i64 imm = (i64) inst->imm; \
+        state->gp_regs[inst->rd] = (i64) (expr); \
 
     // addi instruction
     static void exec_addi(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, +);
+        FUNC(rs1 + imm);
     }
 
     // slti instruction
     static void exec_slti(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, <);
+        FUNC(rs1 < imm);
     }
 
     // sltiu instruction
     static void exec_sltiu(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, <);
+        FUNC((u64) rs1 < (u64) imm);
     }
 
     // andi instruction
     static void exec_andi(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, &);
+        FUNC(rs1 & imm);
     }
 
     // ori instruction
     static void exec_ori(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, |);
+        FUNC(rs1 | imm);
     }
 
     // xori instruction
     static void exec_xori(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, ^);
+        FUNC(rs1 ^ imm);
     }
 
     // addi instruction
     static void exec_addiw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i32, +);
+        FUNC(rs1 + imm);
     }
-
-    #undef EXEC_MACRO
-
-// SLLI/SRLI/SRAI/SLLIW/SRLIW/SRAIW
-
-    // Macros for shift instruction
-    #define EXEC_MACRO(type, op, mask) state->gp_regs[inst->rd] = (type) state->gp_regs[inst->rs1] op (inst->imm & (mask)) \
-
 
     // slli instruction
     static void exec_slli(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, <<, 0x3F);
+        FUNC(rs1 << (imm & 0x3F));
     }
 
     // srli instruction
     static void exec_srli(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, >>, 0x3F);
+        FUNC((u64) rs1 >> (imm & 0x3F));
     }
 
     // srai instruction
     static void exec_srai(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, >>, 0x3F);
+        FUNC(rs1 >> (imm & 0x3F));
     }
 
     // slliw instruction
     static void exec_slliw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i32, <<, 0x1F);
+        FUNC((i32) rs1 << (imm & 0x1F));
     }
 
     // srliw instruction
     static void exec_srliw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u32, >>, 0x1F);
+        FUNC((u32) rs1 >> (imm & 0x1F));
     }
 
     // sraiw instruction
     static void exec_sraiw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i32, >>, 0x1F);
+        FUNC((i32) rs1 >> (imm & 0x1F));
     }
 
-    #undef EXEC_MACRO
+    #undef FUNC
 
-// LUI/AUIPC - page 19
+    /////////////////////////////////////////
+    // Reg / Reg type instructions
+    /////////////////////////////////////////
+
+    // Macros for r-type instruction
+
+    #define FUNC(expr) \
+        i64 rs1 = state->gp_regs[inst->rs1]; \
+        i64 rs2 = state->gp_regs[inst->rs2]; \
+        state->gp_regs[inst->rd] = (i64) (expr); \
+
+    // add instruction
+    static void exec_add(state_t *state, inst_t *inst) {
+        FUNC(rs1 + rs2);
+    }
+
+    // slt instruction
+    static void exec_slt(state_t *state, inst_t *inst) {
+        FUNC(rs1 < rs2);
+    }
+
+    // sltu instruction
+    static void exec_sltu(state_t *state, inst_t *inst) {
+        FUNC((u64) rs1 < (u64) rs2);
+    }
+
+    // and instruction
+    static void exec_and(state_t *state, inst_t *inst) {
+        FUNC(rs1 & rs2);
+    }
+
+    // or instruction
+    static void exec_or(state_t *state, inst_t *inst) {
+        FUNC(rs1 | rs2);
+    }
+
+    // xor instruction
+    static void exec_xor(state_t *state, inst_t *inst) {
+        FUNC(rs1 ^ rs2);
+    }
+
+    // sub instruction
+    static void exec_sub(state_t *state, inst_t *inst) {
+        FUNC(rs1 - rs2);
+    }
+
+    // addw instruction
+    static void exec_addw(state_t *state, inst_t *inst) {
+        FUNC((i32) rs1 + (i32) rs2);
+    }
+
+    // subw instruction
+    static void exec_subw(state_t *state, inst_t *inst) {
+        FUNC((i32) rs1 - (i32) rs2);
+    }
+
+    // sll instruction
+    static void exec_sll(state_t *state, inst_t *inst) {
+        FUNC(rs1 << (rs2 & 0x3F));
+    }
+
+    // srl instruction
+    static void exec_srl(state_t *state, inst_t *inst) {
+        FUNC((u64) rs1 << (rs2 & 0x3F));
+    }
+
+    // sra instruction
+    static void exec_sra(state_t *state, inst_t *inst) {
+        FUNC(rs1 << (rs2 & 0x3F));
+    }
+
+    // sllw instruction
+    static void exec_sllw(state_t *state, inst_t *inst) {
+        FUNC((u32) rs1 << (rs2 & 0x1F));
+    }
+
+    // srlw instruction
+    static void exec_srlw(state_t *state, inst_t *inst) {
+        FUNC((u32) rs1 << (rs2 & 0x1F));
+    }
+
+    // sraw instruction
+    static void exec_sraw(state_t *state, inst_t *inst) {
+        FUNC((i32) rs1 << (rs2 & 0x1F));
+    }
+
+    // mul instruction
+    static void exec_mul(state_t *state, inst_t *inst) {
+        FUNC(rs1 * rs2);
+    }
+
+    // mulh instruction
+    static void exec_mulh(state_t *state, inst_t *inst) {
+        fatal("unimplemented MULH instructions");
+    }
+
+    // mulhsu instruction
+    static void exec_mulhsu(state_t *state, inst_t *inst) {
+        fatal("unimplemented MULHSU instructions");
+    }
+
+    // mulhu instruction
+    static void exec_mulhu(state_t *state, inst_t *inst) {
+        fatal("unimplemented MULHU instructions");
+    }
+
+    // div instruction
+    static void exec_div(state_t *state, inst_t *inst) {
+        FUNC(rs1 / rs2);
+    }
+
+    // divu instruction
+    static void exec_divu(state_t *state, inst_t *inst) {
+        FUNC((u64) rs1 / (u64) rs2);
+    }
+
+    // rem instruction
+    static void exec_rem(state_t *state, inst_t *inst) {
+        FUNC(rs1 % rs2);
+    }
+
+    // remu instruction
+    static void exec_remu(state_t *state, inst_t *inst) {
+        FUNC((u64) rs1 % (u64) rs2);
+    }
+
+    // mulw instruction
+    static void exec_mulw(state_t *state, inst_t *inst) {
+        FUNC((i32) rs1 * (i32) rs2);
+    }
+
+    // divw instruction
+    static void exec_divw(state_t *state, inst_t *inst) {
+        FUNC((i32) rs1 / (i32) rs2);
+    }
+
+    // divuw instruction
+    static void exec_divuw(state_t *state, inst_t *inst) {
+        FUNC((u32) rs1 / (u32) rs2);
+    }
+
+    // remw instruction
+    static void exec_remw(state_t *state, inst_t *inst) {
+        FUNC((i32) rs1 % (i32) rs2);
+    }
+
+    // remuw instruction
+    static void exec_remuw(state_t *state, inst_t *inst) {
+        FUNC((u32) rs1 % (u32) rs2);
+    }
+
+    #undef FUNC
+
+    /////////////////////////////////////////
+    // Other type instructions
+    /////////////////////////////////////////
 
     // lui instruction
     static void exec_lui(state_t *state, inst_t *inst) {
@@ -99,102 +249,12 @@ typedef void (func_t)(state_t *, inst_t *);
         state->gp_regs[inst->rd] = (i64) inst->imm + state->pc;
     }
 
-// ADD/SLT/SLTU/AND/OR/XOR/SUB/ADDW/SUBW
 
-    // Macros for r-type instruction
-    #define EXEC_MACRO(type, op) \
-        state->gp_regs[inst->rd] =(i64) (type) state->gp_regs[inst->rs1] op (type) state->gp_regs[inst->rs2] \
+    /////////////////////////////////////////
+    // Jump type instructions
+    /////////////////////////////////////////
 
-
-    // add instruction
-    static void exec_add(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, +);
-    }
-
-    // slt instruction
-    static void exec_slt(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, <);
-    }
-
-    // sltu instruction
-    static void exec_sltu(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, <);
-    }
-
-    // and instruction
-    static void exec_and(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, &);
-    }
-
-    // or instruction
-    static void exec_or(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, |);
-    }
-
-    // xor instruction
-    static void exec_xor(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, ^);
-    }
-
-    // sub instruction
-    static void exec_sub(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, -);
-    }
-
-    // addw instruction
-    static void exec_addw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i32, +);
-    }
-
-    // subw instruction
-    static void exec_subw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u32, -);
-    }
-
-    #undef EXEC_MACRO
-
-// SLL/SRL/SRA/SLLW/SRLW/SRAW
-
-    // Macros for shift instruction
-    #define EXEC_MACRO(type, op, mask) \
-        state->gp_regs[inst->rd] = (type) state->gp_regs[inst->rs1] op (state->gp_regs[inst->rs2] & mask) \
-
-    // sll instruction
-    static void exec_sll(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, <<, 0x3F);
-    }
-
-    // srl instruction
-    static void exec_srl(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, >>, 0x3F);
-    }
-
-    // sra instruction
-    static void exec_sra(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, >>, 0x3F);
-    }
-
-    // sllw instruction
-    static void exec_sllw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u32, <<, 0x1F);
-    }
-
-    // srlw instruction
-    static void exec_srlw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u32, >>, 0x1F);
-    }
-
-    // sraw instruction
-    static void exec_sraw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i32, >>, 0x1F);
-    }
-
-    #undef EXEC_MACRO
-
-
-// JAL/JALR
-
-    #define EXEC_MACRO(expr) \
+    #define FUNC(expr) \
         state->gp_regs[inst->rd] = state->pc + 4; \
         state->exit_reason = direct_branch; \
         state->reenter_pc = (expr); \
@@ -205,18 +265,20 @@ typedef void (func_t)(state_t *, inst_t *);
 
 
     static void exec_jal(state_t *state, inst_t *inst) {
-        EXEC_MACRO(state->pc + (i64) inst->imm);
+        FUNC(state->pc + (i64) inst->imm);
     }
 
     static void exec_jalr(state_t *state, inst_t *inst) {
-        EXEC_MACRO((state->gp_regs[inst->rs1] + (i64) inst->imm) & 0xFFFFFFFFFFFFFFFE);
+        FUNC((state->gp_regs[inst->rs1] + (i64) inst->imm) & 0xFFFFFFFFFFFFFFFE);
     }
 
-    #undef EXEC_MACRO
+    #undef FUNC
 
-// BEQ/BNE/BLT(U)/BGE(U)
+    /////////////////////////////////////////
+    // Branch type instructions
+    /////////////////////////////////////////
 
-    #define EXEC_MACRO(type, op) \
+    #define FUNC(type, op) \
         bool result = ((type) state->gp_regs[inst->rs1]) op ((type) state->gp_regs[inst->rs2]); \
         if (result) { \
             state->exit_reason = indirect_branch; \
@@ -229,151 +291,144 @@ typedef void (func_t)(state_t *, inst_t *);
 
 
     static void exec_beq(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, ==);
+        FUNC(i64, ==);
     }
 
     static void exec_bne(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, !=);
+        FUNC(i64, !=);
     }
 
     static void exec_blt(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, <);
+        FUNC(i64, <);
     }
 
     static void exec_bltu(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, <);
+        FUNC(u64, <);
     }
 
     static void exec_bge(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, >=);
+        FUNC(i64, >=);
     }
 
     static void exec_bgeu(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, >=);
+        FUNC(u64, >=);
     }
 
-    #undef EXEC_MACRO
+    #undef FUNC
 
-// LB/LH/LW/LD/LBU/LHU/LWU
+    /////////////////////////////////////////
+    // Load type instructions
+    /////////////////////////////////////////
 
-    #define EXEC_MACRO(type) \
+    #define FUNC(type) \
         u64 address = state->gp_regs[inst->rs1] + (i64) inst->imm; \
         state->gp_regs[inst->rd] =  *((type *) TO_HOST(address)); \
 
 
     static void exec_lb(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i8);
+        FUNC(i8);
     }
 
     static void exec_lh(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i16);
+        FUNC(i16);
     }
 
     static void exec_lw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i32);
+        FUNC(i32);
     }
 
     static void exec_ld(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64);
+        FUNC(i64);
     }
 
     static void exec_lbu(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u8);
+        FUNC(u8);
     }
 
     static void exec_lhu(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u16);
+        FUNC(u16);
     }
 
     static void exec_lwu(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u32);
+        FUNC(u32);
     }
 
-    #undef EXEC_MACRO
+    #undef FUNC
 
-// SB/SH/SW/SD
+    /////////////////////////////////////////
+    // Store type instructions
+    /////////////////////////////////////////
 
-    #define EXEC_MACRO(type) \
+    #define FUNC(type) \
         u64 address = state->gp_regs[inst->rs1] + (i64) inst->imm; \
         *((type *) TO_HOST(address)) = state->gp_regs[inst->rs2]; \
 
 
     static void exec_sb(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i8);
+        FUNC(i8);
     }
 
     static void exec_sh(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i16);
+        FUNC(i16);
     }
 
     static void exec_sw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i32);
+        FUNC(i32);
     }
 
     static void exec_sd(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64);
+        FUNC(i64);
     }
 
-    #undef EXEC_MACRO
+    #undef FUNC
 
-// MUL/MULH/MULHSU/MULHU/DIV/DIVU/REM/REMU/MULW/DIVW/DIVUW/REMW/REMUW
+    /////////////////////////////////////////
+    // Zicsr instructions
+    /////////////////////////////////////////
 
-    #define EXEC_MACRO(type, op) \
-        state->gp_regs[inst->rd] =(i64) (type) state->gp_regs[inst->rs1] op (type) state->gp_regs[inst->rs2] \
+    #define FUNC(cond, expr) \
+        i64 rs1 = state->gp_regs[inst->rs1]; \
+        u64 csr = (u64) state->csr[inst->csr]; \
+        if (cond != 0) { \
+            state->gp_regs[inst->rd] = csr; \
+            state->csr[inst->csr] = (expr); \
+        } \
 
-    static void exec_mul(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, *);
+    static void exec_csrrw(state_t *state, inst_t *inst) {
+        FUNC(inst->rd, rs1);
     }
 
-    static void exec_mulh(state_t *state, inst_t *inst) {
-        fatal("unimplemented MULH instructions");
+    static void exec_csrrs(state_t *state, inst_t *inst) {
+        FUNC(inst->rs1, csr | rs1);
     }
 
-    static void exec_mulhsu(state_t *state, inst_t *inst) {
-        fatal("unimplemented MULHSU instructions");
+    static void exec_csrrc(state_t *state, inst_t *inst) {
+        FUNC(inst->rs1, csr & ~rs1);
     }
 
-    static void exec_mulhu(state_t *state, inst_t *inst) {
-        fatal("unimplemented MULHU instructions");
+    #undef FUNC
+
+    #define FUNC(cond, expr) \
+        u64 csr = (u64) state->csr[inst->csr]; \
+        u32 imm = inst->imm; \
+        if (cond != 0) { \
+            state->gp_regs[inst->rd] = csr; \
+            state->csr[inst->csr] = (expr); \
+        } \
+
+    static void exec_csrrwi(state_t *state, inst_t *inst) {
+        FUNC(inst->rd, imm);
     }
 
-    static void exec_div(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, /);
+    static void exec_csrrsi(state_t *state, inst_t *inst) {
+        FUNC(imm, csr | imm);
     }
 
-    static void exec_divu(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, /);
+    static void exec_csrrci(state_t *state, inst_t *inst) {
+        FUNC(imm, csr & ~imm);
     }
 
-    static void exec_rem(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i64, %);
-    }
-
-    static void exec_remu(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u64, %);
-    }
-
-    static void exec_mulw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i32, *);
-    }
-
-    static void exec_divw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i32, /);
-    }
-
-    static void exec_divuw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u32, /);
-    }
-
-    static void exec_remw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(i32, %);
-    }
-
-    static void exec_remuw(state_t *state, inst_t *inst) {
-        EXEC_MACRO(u32, %);
-    }
-
-    #undef EXEC_MACRO
+    #undef FUNC
 
 // MISC instructions
 
@@ -462,6 +517,12 @@ static func_t *funcs[] = {
     exec_divuw,
     exec_remw,
     exec_remuw,
+    exec_csrrw,
+    exec_csrrs,
+    exec_csrrc,
+    exec_csrrwi,
+    exec_csrrsi,
+    exec_csrrci,
 };
 
 /////////////////////////////////////////

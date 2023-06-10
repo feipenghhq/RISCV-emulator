@@ -35,6 +35,9 @@
 #define EXTRACT_IMM_SIGNED(inst, imm_h, imm_l, inst_l) \
     (((i32) (inst >> (inst_l)) & IMM_MASK(imm_h, imm_l)) << (imm_l))
 
+// Macros for invalid instructions
+#define INVALID_INST() fatalf("Invalid Instruction: %x", raw_inst)
+
 /**
  * @brief R type instructions
  *
@@ -93,7 +96,7 @@ static inline inst_t inst_b_type(u32 inst) {
     imm = imm | EXTRACT_IMM_UNSIGNED(inst, 4, 1, 8);    // imm[4:1]  - inst[11:8]  - 4 bits
     imm = imm | EXTRACT_IMM_UNSIGNED(inst, 10, 5, 25);  // imm[10:5] - inst[30:25] - 6 bits
     imm = imm | EXTRACT_IMM_UNSIGNED(inst, 11, 11, 7);  // imm[11]   - inst[7]     - 1 bits
-    imm = imm | EXTRACT_IMM_SIGNED(inst, 12, 12, 31);    // imm[12]  - inst[31]    - 1 bits
+    imm = imm | EXTRACT_IMM_SIGNED(inst, 12, 12, 31);   // imm[12]   - inst[31]    - 1 bits
     return (inst_t) {
         .imm = imm,
         .rs1 = RS1(inst),
@@ -135,6 +138,22 @@ static inline inst_t inst_j_type(u32 inst) {
 }
 
 /**
+ * @brief Zicsr type instructions
+ *
+ * @param inst
+ * @return inst_t
+ */
+static inline inst_t inst_csr_type(u32 inst) {
+    u32 imm = EXTRACT_IMM_UNSIGNED(inst, 4, 0, 15);
+    return (inst_t) {
+        .imm = imm,
+        .csr = (inst >> 20) & 0xFFF,
+        .rs1 = RS1(inst),
+        .rd = RD(inst),
+    };
+}
+
+/**
  * @brief decode the instruction
  *
  * @param inst      instruction struct
@@ -145,6 +164,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
     // Refer to riscv-spec-20191213.pdf 16.8 RVC Instruction Set Listings
     u32 quadrant = QUADRANT(raw_inst);
 
+    // extract different field from instructions
     u8 opcode = OPCODE(raw_inst);
     u8 funct3 = FUNCT3(raw_inst);
     u8 funct7 = FUNCT7(raw_inst);
@@ -170,7 +190,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         case 0x4: inst->type = inst_lbu; return;    // RV32I - LBU
                         case 0x5: inst->type = inst_lhu; return;    // RV32I - LHU
                         case 0x6: inst->type = inst_lwu; return;    // RV64I - LWU
-                        default: fatalf("Invalid Instruction: %x", raw_inst);
+                        default: INVALID_INST();
                     }
                 }
 
@@ -193,7 +213,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                             else if (funct7 == 0x20) {inst->type = inst_srai; return;} // RV64I - SRAI
                             else                     {fatal("Not a valid itype instruction");}
                         }
-                        default: fatalf("Invalid Instruction: %x", raw_inst);
+                        default: INVALID_INST();
                     }
                 }
 
@@ -213,7 +233,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                             else if (funct7 == 0x20) {inst->type = inst_sraiw; return;} // RV64I - SRAIW
                             else                     {fatal("Not a valid itype instruction");}
                         }
-                        default: fatalf("Invalid Instruction: %x", raw_inst);
+                        default: INVALID_INST();
                     }
                 }
 
@@ -224,7 +244,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         case 0x1: inst->type = inst_sh; return;     // RV32I - SH
                         case 0x2: inst->type = inst_sw; return;     // RV32I - SW
                         case 0x3: inst->type = inst_sd; return;     // RV64I - SD
-                        default: fatalf("Invalid Instruction: %x", raw_inst);
+                        default: INVALID_INST();
                     }
                 }
 
@@ -244,7 +264,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                                     case 0x5: {inst->type = inst_divu;   return;}    // RV32M - DIVU
                                     case 0x6: {inst->type = inst_rem;    return;}    // RV32M - REM
                                     case 0x7: {inst->type = inst_remu;   return;}    // RV32M - REMU
-                                    default: fatalf("Invalid Instruction: %x", raw_inst);
+                                    default: INVALID_INST();
                                 }
                             }
                             else                     {fatal("Not a valid arithmetic instruction");}
@@ -260,7 +280,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         }
                         case 0x6: inst->type = inst_or;  return; // RV32I - OR
                         case 0x7: inst->type = inst_and; return; // RV32I - AND
-                        default: fatalf("Invalid Instruction: %x", raw_inst);
+                        default: INVALID_INST();
                     }
                 }
 
@@ -282,19 +302,19 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                                     case 0x5: {inst->type = inst_divuw;   return;}    // RV32M - DIVUW
                                     case 0x6: {inst->type = inst_remw;    return;}    // RV32M - REMW
                                     case 0x7: {inst->type = inst_remuw;   return;}    // RV32M - REMUW
-                                    default: fatalf("Invalid Instruction: %x", raw_inst);
+                                    default: INVALID_INST();
                                 }
                             }
-                            else                     {fatalf("Invalid Instruction: %x", raw_inst);}
+                            else                     {INVALID_INST();}
                         }
                         case 0x1: inst->type = inst_sllw;  return; // RV64I - SLLW
                         case 0x5: {
                             if      (funct7 == 0x0)  {inst->type = inst_srlw; return;} // RV64I - SRLW
                             else if (funct7 == 0x20) {inst->type = inst_sraw; return;} // RV64I - SRAW
-                            else                     {fatalf("Invalid Instruction: %x", raw_inst);}
+                            else                     {INVALID_INST();}
                         }
 
-                        default: fatalf("Invalid Instruction: %x", raw_inst);
+                        default: INVALID_INST();
                     }
                 }
 
@@ -307,7 +327,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         case 0x5: inst->type = inst_bge; return;    // RV32I - BGE
                         case 0x6: inst->type = inst_bltu; return;   // RV32I - BLTU
                         case 0x7: inst->type = inst_bgeu; return;   // RV32I - BGEU
-                        default: fatalf("Invalid Instruction: %x", raw_inst);
+                        default: INVALID_INST();
                     }
                 }
 
@@ -324,9 +344,22 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                 }
 
                 case 0x1C: {
-                    if      (inst_31_20 == 0x0) {inst->type = inst_ecall; return;}  // RV32I - ECALL
-                    else if (inst_31_20 == 0x1) {inst->type = inst_ebreak; return;} // RV32I - EBREAK
-                    else                        {fatalf("unimplemented. Instruction = %x", raw_inst);}
+
+                    switch (funct3) {
+                        case 0x0: {
+                            if      (inst_31_20 == 0x0) {inst->type = inst_ecall; return;}  // RV32I - ECALL
+                            else if (inst_31_20 == 0x1) {inst->type = inst_ebreak; return;} // RV32I - EBREAK
+                            else                        {fatalf("unimplemented. Instruction = %x", raw_inst);}
+                        }
+                        case 0x1: {inst->type = inst_csrrw;  *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRW
+                        case 0x2: {inst->type = inst_csrrs;  *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRS
+                        case 0x3: {inst->type = inst_csrrc;  *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRC
+                        case 0x5: {inst->type = inst_csrrwi; *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRWI
+                        case 0x6: {inst->type = inst_csrrsi; *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRSI
+                        case 0x7: {inst->type = inst_csrrci; *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRCI
+                        default: INVALID_INST();
+                    }
+
                 }
 
                 default: fatalf("unimplemented. Instruction = %x", raw_inst);

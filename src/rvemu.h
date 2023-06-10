@@ -74,6 +74,7 @@ enum exit_reason_t {
 typedef struct {
     enum exit_reason_t exit_reason;
     u64 gp_regs[num_gp_regs];   // RISCV 32 general purpose registers
+    u32 csr[4096];              // 4096 CSR registers
 
     u64 pc;                     // Program counter
     u64 reenter_pc;             // Re-enter Program counter
@@ -112,6 +113,8 @@ enum inst_type_t {
     inst_mul, inst_mulh, inst_mulhsu, inst_mulhu,
     inst_div, inst_divu, inst_rem, inst_remu,
     inst_mulw, inst_divw, inst_divuw, inst_remw, inst_remuw,
+    // "Zicsr"
+    inst_csrrw, inst_csrrs, inst_csrrc, inst_csrrwi, inst_csrrsi, inst_csrrci,
     // Numbered instructions
     num_insts,
 };
