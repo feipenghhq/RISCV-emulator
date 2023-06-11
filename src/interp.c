@@ -430,7 +430,99 @@ typedef void (func_t)(state_t *, inst_t *);
 
     #undef FUNC
 
-// MISC instructions
+    /////////////////////////////////////////
+    // RVC Instructions
+    /////////////////////////////////////////
+
+    // Stack Point Based Load type instructions
+
+    #define FUNC(type) \
+        u64 address = state->gp_regs[2] + (u64) inst->imm; \
+        state->gp_regs[inst->rd] =  *((type *) TO_HOST(address)); \
+
+
+    static void exec_clwsp(state_t *state, inst_t *inst) {
+        FUNC(i32);
+    }
+
+    static void exec_cldsp(state_t *state, inst_t *inst) {
+        FUNC(i64);
+    }
+
+    #undef FUNC
+
+    // Stack Point Based Store type instructions
+
+    #define FUNC(type) \
+        u64 address = state->gp_regs[2] + (u64) inst->imm; \
+        *((type *) TO_HOST(address)) = state->gp_regs[inst->rs2]; \
+
+
+    static void exec_cswsp(state_t *state, inst_t *inst) {
+        FUNC(i32);
+    }
+
+    static void exec_csdsp(state_t *state, inst_t *inst) {
+        FUNC(i64);
+    }
+
+    #undef FUNC
+
+    // Register Based Load type instructions
+
+    #define FUNC(type) \
+        u64 address = state->gp_regs[inst->rs1] + (u64) inst->imm; \
+        state->gp_regs[inst->rd] =  *((type *) TO_HOST(address)); \
+
+
+    static void exec_clw(state_t *state, inst_t *inst) {
+        FUNC(i32);
+    }
+
+    static void exec_cld(state_t *state, inst_t *inst) {
+        FUNC(i64);
+    }
+
+    #undef FUNC
+
+    // Register Based Store type instructions
+
+    #define FUNC(type) \
+        u64 address = state->gp_regs[inst->rs1] + (u64) inst->imm; \
+        *((type *) TO_HOST(address)) = state->gp_regs[inst->rs2]; \
+
+
+    static void exec_csw(state_t *state, inst_t *inst) {
+        FUNC(i32);
+    }
+
+    static void exec_csd(state_t *state, inst_t *inst) {
+        FUNC(i64);
+    }
+
+    #undef FUNC
+
+    // Control Transfer instruction
+
+    static void exec_cj(state_t *state, inst_t *inst) {
+        state->exit_reason = direct_branch;
+        state->reenter_pc = state->pc + (i64) inst->imm;
+    }
+
+    static void exec_cjr(state_t *state, inst_t *inst) {
+        state->exit_reason = direct_branch;
+        state->reenter_pc = state->pc + state->gp_regs[inst->rs1];
+    }
+
+    static void exec_cjalr(state_t *state, inst_t *inst) {
+        state->exit_reason = direct_branch;
+        state->reenter_pc = state->pc + state->gp_regs[inst->rs1];
+        state->gp_regs[1] = state->pc + 2;
+    }
+
+    /////////////////////////////////////////
+    // MISC instructions
+    /////////////////////////////////////////
 
     static void exec_fence(state_t *state, inst_t *inst) {
         fatal("unimplemented FENCE instructions");
@@ -523,6 +615,17 @@ static func_t *funcs[] = {
     exec_csrrwi,
     exec_csrrsi,
     exec_csrrci,
+    exec_clwsp,
+    exec_cldsp,
+    exec_cswsp,
+    exec_csdsp,
+    exec_clw,
+    exec_cld,
+    exec_csw,
+    exec_csd,
+    exec_cj,
+    exec_cjr,
+    exec_cjalr,
 };
 
 /////////////////////////////////////////

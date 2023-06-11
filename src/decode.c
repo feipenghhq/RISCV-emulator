@@ -18,6 +18,13 @@
 #define FUNCT7(data)    (((data) >> 25) & 0x7F)
 #define IMM116(data)    (((data) >> 26) & 0x3F)
 #define INST31_20(data) (((data) >> 20) & 0xFFF)
+#define C_FUNCT3(data)  (((data) >> 13) & 0x7)
+#define C_FUNCT4(data)  (((data) >> 12) & 0xF)
+#define C_RS1(data)     (((data) >> 7) & 0x1F)
+#define C_RS2(data)     (((data) >> 2) & 0x1F)
+#define C_RS1_(data)    (((data) >> 7) & 0x7)
+#define C_RS2_(data)    (((data) >> 2) & 0x7)
+#define C_RD_(data)     (((data) >> 2) & 0x7)
 
 /////////////////////////////////////////
 // Functions to decode instruction
@@ -169,11 +176,161 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
     u8 funct3 = FUNCT3(raw_inst);
     u8 funct7 = FUNCT7(raw_inst);
     u16 inst_31_20 = INST31_20(raw_inst);
+    u8 c_funct3 = C_FUNCT3(raw_inst);
+    //u8 c_funct4 = C_FUNCT4(raw_inst);
 
     switch(quadrant) {
-        case 0x0: fatalf("unimplemented. Instruction = %x", raw_inst);
-        case 0x1: fatalf("unimplemented. Instruction = %x", raw_inst);
-        case 0x2: fatalf("unimplemented. Instruction = %x", raw_inst);
+        case 0x0: {
+            inst->rvc = true;
+
+            switch(c_funct3) {
+
+                case 0x2: { // RVC - C.LW
+                    inst->type = inst_clw;
+                    inst->rd = C_RD_(raw_inst);
+                    inst->rs1 = C_RS1_(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 2, 2, 6);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 3, 10);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 6, 6, 5);
+                    break;
+                }
+
+                case 0x3: { // RVC - C.LD
+                    inst->type = inst_cld;
+                    inst->rd = C_RD_(raw_inst);
+                    inst->rs1 = C_RS1_(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 3, 10);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 7, 6, 5);
+                    break;
+                }
+
+
+                case 0x6: { // RVC - C.SW
+                    inst->type = inst_csw;
+                    inst->rs1 = C_RS1_(raw_inst);
+                    inst->rs2 = C_RS2_(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 2, 2, 6);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 3, 10);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 6, 6, 5);
+                    break;
+                }
+
+                case 0x7: { // RVC - C.SD
+                    inst->type = inst_csd;
+                    inst->rs1 = C_RS1_(raw_inst);
+                    inst->rs2 = C_RS2_(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 3, 10);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 7, 6, 5);
+                    break;
+                }
+
+                default: fatalf("unimplemented. Instruction = %x", raw_inst);
+
+            }
+
+            break;
+        }
+
+        case 0x1: {
+            inst->rvc = true;
+
+            switch(c_funct3) {
+
+                case 0x5: { // RVC - J
+                    inst->type = inst_cj;
+                    u16 imm = 0;
+                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 11, 11, 12);
+                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 4, 11);
+                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 9, 8, 9);
+                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 10, 10, 8);
+                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 6, 6, 7);
+                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 7, 7, 6);
+                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 3, 1, 3);
+                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 2);
+                    inst->imm = (i64) imm;
+                    break;
+                }
+
+                default: fatalf("unimplemented. Instruction = %x", raw_inst);
+            }
+
+            break;
+        }
+
+        case 0x2: {
+            inst->rvc = true;
+
+            switch(c_funct3) {
+
+                case 0x2: { // RVC - C.LWSP
+                    inst->type = inst_clwsp;
+                    inst->rd = RD(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 2, 4);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 7, 6, 2);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 12);
+                    if (inst->rd == 0) INVALID_INST();
+                    break;
+                }
+
+                case 0x3: { // RVC - C.LDSP
+                    inst->type = inst_cldsp;
+                    inst->rd = RD(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 3, 5);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 8, 6, 2);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 12);
+                    if (inst->rd == 0) INVALID_INST();
+                    break;
+                }
+
+                case 0x4: {
+                    u8 rs1 = C_RS1(raw_inst);
+                    u8 rs2 = C_RS2(raw_inst);
+                    u8 inst_12 = (raw_inst >> 12) & 0x1;
+                    if (inst_12 == 0 && rs1 != 0 && rs2 == 0) { // RVC - C.JR
+                        inst->type = inst_cjr;
+                        inst->rs1 = rs1;
+                    }
+
+                    if (inst_12 == 1 && rs1 != 0 && rs2 == 0) { // RVC - C.JALR
+                        inst->type = inst_cjalr;
+                        inst->rs1 = rs1;
+                    }
+
+                    break;
+                }
+
+
+                case 0x6: { // RVC - C.SWSP
+                    inst->type = inst_cswsp;
+                    inst->rs2 = C_RS2(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 2, 9);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 7, 6, 7);
+                    break;
+                }
+
+                case 0x7: { // RVC - C.SDSP
+                    inst->type = inst_csdsp;
+                    inst->rs2 = C_RS2(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 3, 10);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 8, 6, 7);
+                    break;
+                }
+
+                default: fatalf("unimplemented. Instruction = %x", raw_inst);
+
+            }
+
+            break;
+        }
+
         case 0x3: {
 
             inst->rvc = false;  // not compressed instructions

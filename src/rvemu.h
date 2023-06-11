@@ -115,6 +115,10 @@ enum inst_type_t {
     inst_mulw, inst_divw, inst_divuw, inst_remw, inst_remuw,
     // "Zicsr"
     inst_csrrw, inst_csrrs, inst_csrrc, inst_csrrwi, inst_csrrsi, inst_csrrci,
+    // RVC instructions
+    inst_clwsp, inst_cldsp, inst_cswsp, inst_csdsp,
+    inst_clw, inst_cld, inst_csw, inst_csd,
+    inst_cj, inst_cjr, inst_cjalr,
     // Numbered instructions
     num_insts,
 };
