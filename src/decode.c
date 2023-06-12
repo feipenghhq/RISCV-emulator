@@ -18,13 +18,16 @@
 #define FUNCT7(data)    (((data) >> 25) & 0x7F)
 #define IMM116(data)    (((data) >> 26) & 0x3F)
 #define INST31_20(data) (((data) >> 20) & 0xFFF)
+#define C_FUNCT2(data)  (((data) >> 10) & 0x3)
 #define C_FUNCT3(data)  (((data) >> 13) & 0x7)
 #define C_FUNCT4(data)  (((data) >> 12) & 0xF)
 #define C_RS1(data)     (((data) >> 7) & 0x1F)
 #define C_RS2(data)     (((data) >> 2) & 0x1F)
+#define C_RD(data)      (((data) >> 7) & 0x1F)
 #define C_RS1_(data)    (((data) >> 7) & 0x7)
 #define C_RS2_(data)    (((data) >> 2) & 0x7)
 #define C_RD_(data)     (((data) >> 2) & 0x7)
+#define C_FUNCT_6_5(data)  (((data) >> 5) & 0x3)
 
 /////////////////////////////////////////
 // Functions to decode instruction
@@ -44,6 +47,7 @@
 
 // Macros for invalid instructions
 #define INVALID_INST() fatalf("Invalid Instruction: %x", raw_inst)
+#define UNIMPL_INST() fatalf("unimplemented. Instruction = %x", raw_inst)
 
 /**
  * @brief R type instructions
@@ -176,14 +180,28 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
     u8 funct3 = FUNCT3(raw_inst);
     u8 funct7 = FUNCT7(raw_inst);
     u16 inst_31_20 = INST31_20(raw_inst);
+    u8 c_funct2 = C_FUNCT2(raw_inst);
     u8 c_funct3 = C_FUNCT3(raw_inst);
-    //u8 c_funct4 = C_FUNCT4(raw_inst);
+    u8 c_funct_6_5 = C_FUNCT_6_5(raw_inst);
 
     switch(quadrant) {
         case 0x0: {
             inst->rvc = true;
 
             switch(c_funct3) {
+
+                case 0x0: { // RVC - C.ADDI4SPN
+                    inst->type = inst_caddi4spn;
+                    inst->rd = C_RD_(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 4, 11);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 9, 6, 7);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 2, 2, 6);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 3, 3, 5);
+                    // only valid when imm != 0
+                    if (inst->imm == 0) INVALID_INST();
+                    break;
+                }
 
                 case 0x2: { // RVC - C.LW
                     inst->type = inst_clw;
@@ -228,7 +246,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                     break;
                 }
 
-                default: fatalf("unimplemented. Instruction = %x", raw_inst);
+                default: UNIMPL_INST();
 
             }
 
@@ -240,22 +258,187 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
 
             switch(c_funct3) {
 
-                case 0x5: { // RVC - J
-                    inst->type = inst_cj;
-                    u16 imm = 0;
-                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 11, 11, 12);
-                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 4, 11);
-                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 9, 8, 9);
-                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 10, 10, 8);
-                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 6, 6, 7);
-                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 7, 7, 6);
-                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 3, 1, 3);
-                    imm = imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 2);
-                    inst->imm = (i64) imm;
+                case 0x0: {
+                    inst->rs1 = C_RS1(raw_inst);
+                    inst->rd = C_RD(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 5, 5, 12);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 0, 2);
+                    // only valid when rd != 0 and imm != 0
+                    if (inst->rd == 0)                          inst->type = inst_cnop;     // RVC - C.NOP
+                    else if (inst->rd != 0 && inst->imm != 0)   inst->type = inst_caddi;    // RVC - C.ADDI
+                    else                                        UNIMPL_INST();
                     break;
                 }
 
-                default: fatalf("unimplemented. Instruction = %x", raw_inst);
+                case 0x1: { // RVC - C.ADDIW
+                    inst->type = inst_caddiw,
+                    inst->rs1 = C_RS1(raw_inst);
+                    inst->rd = C_RD(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 5, 5, 12);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 0, 2);
+                    // only valid when rd != 0
+                    if (inst->rd == 0) INVALID_INST();
+                    break;
+                }
+
+                case 0x2: { // RVC - C.LI
+                    inst->type = inst_cli,
+                    inst->rd = C_RD(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 5, 5, 12);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 0, 2);
+                    // only valid when rd != 0
+                    if (inst->rd == 0) UNIMPL_INST();
+                    break;
+                }
+
+                case 0x3: {
+                    inst->rd = C_RD(raw_inst);
+                    if (inst->rd != 0 && inst->rd != 2) { // RVC - C.LUI
+                        inst->type = inst_clui,
+                        inst->imm = 0;
+                        inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 17, 17, 12);
+                        inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 16, 12, 2);
+                        // only valid when rd != 0, 2 and imm != 0
+                        if (inst->rd == 0 && inst->rd != 2 && inst->imm != 0) UNIMPL_INST();
+                    }
+                    else if (inst->rd == 2) { // RVC - C.ADDI16SP
+                        inst->type = inst_caddi16sp;
+                        inst->imm = 0;
+                        inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 9, 9, 12);
+                        inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 4, 6);
+                        inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 6, 6, 5);
+                        inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 8, 7, 3);
+                        inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 2);
+                        // only valid when imm != 0
+                        if (inst->imm == 0) INVALID_INST();
+                    }
+
+                    break;
+                }
+
+                case 0x4: {
+
+                    switch (c_funct2) {
+
+                        case 0x0: {
+                            // use imm as shamt
+                            inst->imm = 0;
+                            inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 12);
+                            inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 0, 2);
+                            if (inst->imm != 0) {   // RVC - C.SRLI
+                                inst->type = inst_csrli,
+                                inst->rd = C_RD_(raw_inst);
+                                inst->rs1 = C_RS1_(raw_inst);
+                            }
+                            else {
+                                UNIMPL_INST();
+                            }
+                            break;
+                        }
+
+                        case 0x1: {
+                            // use imm as shamt
+                            inst->imm = 0;
+                            inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 12);
+                            inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 0, 2);
+                            if (inst->imm != 0) {   // RVC - C.SRAI
+                                inst->type = inst_csrai,
+                                inst->rd = C_RD_(raw_inst);
+                                inst->rs1 = C_RS1_(raw_inst);
+                            }
+                            else {
+                                UNIMPL_INST();
+                            }
+                            break;
+                        }
+
+                        case 0x2: {
+                            inst->type = inst_candi,
+                            inst->imm = 0;
+                            inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 5, 5, 12);
+                            inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 0, 2);
+                            inst->rd = C_RD_(raw_inst);
+                            inst->rs1 = C_RS1_(raw_inst);
+                            break;
+                        }
+
+                        case 0x3: {
+                                inst->rs1 = C_RS1_(raw_inst);
+                                inst->rs2 = C_RS2_(raw_inst);
+                                inst->rd = C_RD_(raw_inst);
+                                u8 inst_12 = (raw_inst >> 12) & 0x1;
+
+                                if (inst_12 == 0) {
+
+                                    switch (c_funct_6_5) {
+                                        case 0x0: inst->type = inst_csub; break; // RVC - C.SUB
+                                        case 0x1: inst->type = inst_cxor; break; // RVC - C.XOR
+                                        case 0x2: inst->type = inst_cor;  break; // RVC - C.OR
+                                        case 0x3: inst->type = inst_cand; break; // RVC - C.AND
+                                    }
+
+                                }
+
+                                if (inst_12 == 1) {
+
+                                    switch (c_funct_6_5) {
+                                        case 0x0: inst->type = inst_csubw; break; // RVC - C.SUB
+                                        case 0x1: inst->type = inst_caddw; break; // RVC - C.XOR
+                                        default: INVALID_INST();
+                                    }
+
+                                }
+
+                            break;
+                        }
+
+                        default: {UNIMPL_INST();}
+                    }
+                    break;
+                }
+
+                case 0x5: { // RVC - C.J
+                    inst->type = inst_cj;
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 11, 11, 12);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 4, 11);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 9, 8, 9);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 10, 10, 8);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 6, 6, 7);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 7, 7, 6);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 3, 1, 3);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 2);
+                    break;
+                }
+
+                case 0x6: { // RVC - C.BEQZ
+                    inst->type = inst_cbeqz;
+                    inst->rs1 = C_RS1_(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 8, 8, 12);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 3, 10);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 7, 6, 5);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 2, 1, 3);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 2);
+                    break;
+                }
+
+                case 0x7: { // RVC - C.BNEZ
+                    inst->type = inst_cbnez;
+                    inst->rs1 = C_RS1_(raw_inst);
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 8, 8, 12);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 3, 10);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 7, 6, 5);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 2, 1, 3);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 2);
+                    break;
+                }
+
+                default: UNIMPL_INST();
             }
 
             break;
@@ -265,6 +448,19 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
             inst->rvc = true;
 
             switch(c_funct3) {
+
+                case 0x0: { // RVC - C.SLLI
+                    inst->type = inst_cslli,
+                    inst->rs1 = C_RS1(raw_inst);
+                    inst->rd = C_RD(raw_inst);
+                    // use imm as shamt
+                    inst->imm = 0;
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 12);
+                    inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 0, 2);
+                    // only valid when imm != 0 and rd != 0, else it is HINTs
+                    if (inst->imm == 0 || inst->rd == 0) UNIMPL_INST();
+                    break;
+                }
 
                 case 0x2: { // RVC - C.LWSP
                     inst->type = inst_clwsp;
@@ -291,16 +487,30 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                 case 0x4: {
                     u8 rs1 = C_RS1(raw_inst);
                     u8 rs2 = C_RS2(raw_inst);
+                    u8 rd = C_RD(raw_inst);
                     u8 inst_12 = (raw_inst >> 12) & 0x1;
                     if (inst_12 == 0 && rs1 != 0 && rs2 == 0) { // RVC - C.JR
                         inst->type = inst_cjr;
                         inst->rs1 = rs1;
                     }
-
-                    if (inst_12 == 1 && rs1 != 0 && rs2 == 0) { // RVC - C.JALR
+                    else if (inst_12 == 0 && rd != 0 && rs2 != 0) { // RVC - C.MV
+                        inst->type = inst_cmv;
+                        inst->rd = rd;
+                        inst->rs2 = rs2;
+                    }
+                    else if (inst_12 == 1 && rs1 != 0 && rs2 == 0) { // RVC - C.JALR
                         inst->type = inst_cjalr;
                         inst->rs1 = rs1;
                     }
+                    else if (inst_12 == 1 && rd != 0 && rs2 != 0) { // RVC - C.ADD
+                        inst->type = inst_cadd;
+                        inst->rd = rd;
+                        inst->rs2 = rs2;
+                    }
+                    else if (inst_12 == 1 && rd == 0 && rs2 == 0) { // RVC - E.BREAK
+                        UNIMPL_INST();
+                    }
+                    else UNIMPL_INST();
 
                     break;
                 }
@@ -324,7 +534,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                     break;
                 }
 
-                default: fatalf("unimplemented. Instruction = %x", raw_inst);
+                default: UNIMPL_INST();
 
             }
 
@@ -506,7 +716,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         case 0x0: {
                             if      (inst_31_20 == 0x0) {inst->type = inst_ecall; return;}  // RV32I - ECALL
                             else if (inst_31_20 == 0x1) {inst->type = inst_ebreak; return;} // RV32I - EBREAK
-                            else                        {fatalf("unimplemented. Instruction = %x", raw_inst);}
+                            else                        {UNIMPL_INST();}
                         }
                         case 0x1: {inst->type = inst_csrrw;  *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRW
                         case 0x2: {inst->type = inst_csrrs;  *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRS
@@ -519,7 +729,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
 
                 }
 
-                default: fatalf("unimplemented. Instruction = %x", raw_inst);
+                default: UNIMPL_INST();
             }
 
         }

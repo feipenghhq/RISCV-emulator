@@ -119,6 +119,11 @@ enum inst_type_t {
     inst_clwsp, inst_cldsp, inst_cswsp, inst_csdsp,
     inst_clw, inst_cld, inst_csw, inst_csd,
     inst_cj, inst_cjr, inst_cjalr,
+    inst_cbeqz, inst_cbnez,
+    inst_cli, inst_clui,
+    inst_caddi, inst_caddiw, inst_caddi16sp, inst_caddi4spn, inst_cslli, inst_csrli, inst_csrai, inst_candi,
+    inst_cmv, inst_cadd, inst_cand, inst_cor, inst_cxor, inst_csub, inst_caddw, inst_csubw,
+    inst_cnop,
     // Numbered instructions
     num_insts,
 };

@@ -520,6 +520,72 @@ typedef void (func_t)(state_t *, inst_t *);
         state->gp_regs[1] = state->pc + 2;
     }
 
+    static void exec_cbeqz(state_t *state, inst_t *inst) {
+        if (state->gp_regs[inst->rs1] == 0) {
+            state->exit_reason = indirect_branch;
+            state->reenter_pc = state->pc + (i64) inst->imm;
+        }
+    }
+
+    static void exec_cbnez(state_t *state, inst_t *inst) {
+        if (state->gp_regs[inst->rs1] != 0) {
+            state->exit_reason = indirect_branch;
+            state->reenter_pc = state->pc + (i64) inst->imm;
+        }
+    }
+
+    // Integer Constant-Generation Instructions
+    static void exec_cli(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = (i64) inst->imm;
+    }
+
+    static void exec_clui(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = (i64) inst->imm;
+    }
+
+    // Integer Register-Immediate Operations
+    static void exec_caddi(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = state->gp_regs[inst->rs1] + (i64) inst->imm;
+    }
+
+    static void exec_caddiw(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = (i64) ((i32) state->gp_regs[inst->rs1] + (i32) inst->imm);
+    }
+
+    static void exec_caddi16sp(state_t *state, inst_t *inst) {
+        state->gp_regs[2] = state->gp_regs[2] + (i64) inst->imm;
+    }
+
+    static void exec_caddi4spn(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = state->gp_regs[2] + (i64) inst->imm;
+    }
+
+    static void exec_cslli(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = state->gp_regs[inst->rd] << (inst->imm & 0x3F);
+    }
+
+    static void exec_csrli(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = (u64) state->gp_regs[inst->rd] >> (inst->imm & 0x3F);
+    }
+
+    static void exec_csrai(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = (i64) state->gp_regs[inst->rd] >> (inst->imm & 0x3F);
+    }
+
+    static void exec_candi(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = state->gp_regs[inst->rd] & (i64) inst->imm;
+    }
+
+    // Integer Register-Register Instructions
+
+    static void exec_cmv(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = state->gp_regs[inst->rs2];
+    }
+
+    static void exec_cadd(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = state->gp_regs[inst->rs2] + state->gp_regs[inst->rd];
+    }
+
     /////////////////////////////////////////
     // MISC instructions
     /////////////////////////////////////////
@@ -626,6 +692,20 @@ static func_t *funcs[] = {
     exec_cj,
     exec_cjr,
     exec_cjalr,
+    exec_cbeqz,
+    exec_cbnez,
+    exec_cli,
+    exec_clui,
+    exec_caddi,
+    exec_caddiw,
+    exec_caddi16sp,
+    exec_caddi4spn,
+    exec_cslli,
+    exec_csrli,
+    exec_csrai,
+    exec_candi,
+    exec_cmv,
+    exec_cadd,
 };
 
 /////////////////////////////////////////
