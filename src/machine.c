@@ -17,6 +17,12 @@ enum exit_reason_t machine_step(machine_t *m) {
             continue;
         }
 
+        // continue execution if it is mret
+        if (m->state.exit_reason == mret) {
+            m->state.exit_reason = none;    // reset the exit_reason
+            continue;
+        }
+
         // break on ecall.
         assert(m->state.exit_reason == ecall);
         break;

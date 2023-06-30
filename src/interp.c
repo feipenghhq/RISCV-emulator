@@ -587,6 +587,20 @@ typedef void (func_t)(state_t *, inst_t *);
     }
 
     /////////////////////////////////////////
+    // Trap-Return instructions
+    /////////////////////////////////////////
+
+    static void exec_mret(state_t *state, inst_t *inst) {
+        state->exit_reason = mret;
+        state->reenter_pc = state->csr[mepc_id];
+        csr_set(mstatus, mpv, state->csr[mstatus_id], 0x0);
+        csr_set(mstatus, mpp, state->csr[mstatus_id], 0x0);
+        u8 mpie = csr_get(mstatus, mpie, state->csr[mstatus_id]);
+        csr_set(mstatus, mie, state->csr[mstatus_id], mpie);
+        csr_set(mstatus, mpie, state->csr[mstatus_id], 0x1);
+    }
+
+    /////////////////////////////////////////
     // MISC instructions
     /////////////////////////////////////////
 
@@ -601,6 +615,8 @@ typedef void (func_t)(state_t *, inst_t *);
     static void exec_ebreak(state_t *state, inst_t *inst) {
         fatal("unimplemented EBREAK instructions");
     }
+
+
 
 /////////////////////////////////////////
 // function pointers array
@@ -706,6 +722,8 @@ static func_t *funcs[] = {
     exec_candi,
     exec_cmv,
     exec_cadd,
+
+    exec_mret,
 };
 
 /////////////////////////////////////////
@@ -741,6 +759,7 @@ void exec_block_interp(state_t *state) {
         if (inst.cont) break;
 
         // advance pc
-        state-> pc += inst.rvc ? 2 : 4;
+        state->pc += inst.rvc ? 2 : 4;
+        //printf("Next PC is %lx\n", state->pc); // For debug only
     }
 }

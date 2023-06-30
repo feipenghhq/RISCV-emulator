@@ -716,6 +716,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         case 0x0: {
                             if      (inst_31_20 == 0x0) {inst->type = inst_ecall; return;}  // RV32I - ECALL
                             else if (inst_31_20 == 0x1) {inst->type = inst_ebreak; return;} // RV32I - EBREAK
+                            else if (inst_31_20 == 0x302) {inst->type = inst_mret; return;} // Trap - MRET
                             else                        {UNIMPL_INST();}
                         }
                         case 0x1: {inst->type = inst_csrrw;  *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRW

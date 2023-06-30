@@ -20,6 +20,7 @@
 #include "types.h"
 #include "elfdef.h"
 #include "reg.h"
+#include "csr.h"
 
 //////////////////////////////////
 // Macros
@@ -65,6 +66,7 @@ enum exit_reason_t {
     direct_branch,
     indirect_branch,
     ecall,
+    mret,
 };
 
 /**
@@ -74,7 +76,7 @@ enum exit_reason_t {
 typedef struct {
     enum exit_reason_t exit_reason;
     u64 gp_regs[num_gp_regs];   // RISCV 32 general purpose registers
-    u32 csr[4096];              // 4096 CSR registers
+    u64 csr[4096];              // 4096 CSR registers
 
     u64 pc;                     // Program counter
     u64 reenter_pc;             // Re-enter Program counter
@@ -124,6 +126,8 @@ enum inst_type_t {
     inst_caddi, inst_caddiw, inst_caddi16sp, inst_caddi4spn, inst_cslli, inst_csrli, inst_csrai, inst_candi,
     inst_cmv, inst_cadd, inst_cand, inst_cor, inst_cxor, inst_csub, inst_caddw, inst_csubw,
     inst_cnop,
+    // Trap-Return Instructions
+    inst_mret,
     // Numbered instructions
     num_insts,
 };
