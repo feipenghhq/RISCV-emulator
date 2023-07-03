@@ -62,6 +62,8 @@ typedef struct {
 /**
  * @brief Program header
  *
+ * some info about p_filesz and p_memsz:
+ * https://stackoverflow.com/questions/27958743/difference-between-p-filesz-and-p-memsz-of-elf32-phdr
  */
 typedef struct {
     u32 p_type;     // Identifies the type of the segment.

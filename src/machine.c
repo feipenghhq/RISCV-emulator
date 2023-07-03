@@ -50,3 +50,35 @@ void machine_load_program(machine_t *m, char *prog) {
     // assign the program entry to current PC
     m->state.pc = m->mmu.entry;
 }
+
+void machine_setup(machine_t *m, int argc, char *argv[]) {
+    size_t stack_size = STACK_SIZE;
+    u64 stack = mmu_alloc(&m->mmu, stack_size);
+    m->state.gp_regs[sp] = stack + stack_size;
+
+    // stack memory map:
+    // [                           | argc argv envp auxv]
+    //                             ^ stack bottom (sp)
+    m->state.gp_regs[sp] -= 8; // auxv
+    m->state.gp_regs[sp] -= 8; // envp
+    m->state.gp_regs[sp] -= 8; // argv end
+
+    // processing the arguments from guest program
+    u64 args = argc - 1; // first arg is rvemu itself
+    for (int i = args; i > 0; i--) {
+        // store the argument into following the stack
+        // [ program ][ stack ][ argc ]|[ heap ]
+        size_t len = strlen(argv[i]);
+        // argv[i] is a string, we need to allocate the addition '\0' character
+        u64 addr = mmu_alloc(&m->mmu, len+1);
+        mmu_write(addr, (u8 *) argv[i], len);
+        // store the address of the argument into stack (argc is char** type)
+        m->state.gp_regs[sp] -= 8; // argv[i]
+        mmu_write(m->state.gp_regs[sp], (u8 *) &addr, sizeof(u64));
+    }
+
+    m->state.gp_regs[sp] -= 8; // argc
+    mmu_write(m->state.gp_regs[sp], (u8 *) &args, sizeof(u64));
+
+}
+

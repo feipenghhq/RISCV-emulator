@@ -750,8 +750,8 @@ void exec_block_interp(state_t *state) {
         inst_decode(&inst, raw_inst);
 
         // execute the instruction
-        //funcs[inst.type](state, &inst);
-        funcs[0](state, &inst);
+        funcs[inst.type](state, &inst);
+        //funcs[0](state, &inst);
 
         // revert back register zero value.
         state->gp_regs[zero] = 0;

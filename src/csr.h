@@ -1,4 +1,6 @@
+////////////////////////////////////
 // CSR register
+////////////////////////////////////
 
 // Machine Trap Setup
  #define mstatus_id     0x300
@@ -19,7 +21,9 @@
 #define mtinst_id       0x34A
 #define mtval2_id       0x34B
 
-// CSR register field extraction
+////////////////////////////////////
+// CSR register field access
+////////////////////////////////////
 
 // Helper macro
 #define csr_gen_mask64(data, pos)       ((u64) (data) << (pos))
@@ -34,7 +38,11 @@
 // get a field for a csr register
 #define csr_get(csr, field, reg)        csr_get_field(reg, csr_pos_name(csr, field), csr_mask_name(csr, field))
 
-// mstatus
+//////////////////////////////////////
+// CSR Field definations
+////////////////////////////////////
+
+// - start of mstatus - //
 #define mstatus_mpv_pos             39
 #define mstatus_mpv_mask            csr_gen_mask64(0x1, mstatus_mpv_pos)
 
@@ -47,3 +55,4 @@
 #define mstatus_mie_pos             3
 #define mstatus_mie_mask            csr_gen_mask64(0x1, mstatus_mie_pos)
 
+// - end of mstatus - //

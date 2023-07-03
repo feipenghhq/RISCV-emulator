@@ -42,6 +42,8 @@
 #define TO_GUEST(addr)  ((addr) - GUEST_MEMORY_OFFSET)
 #define TO_HOST(addr)   ((addr) + GUEST_MEMORY_OFFSET)
 
+#define STACK_SIZE          32 * 1024 * 1024
+
 //////////////////////////////////
 // Structs
 //////////////////////////////////
@@ -51,10 +53,11 @@
  *
  */
 typedef struct {
-    u64 entry;  // starting address of the executable section of the program
-    u64 host_alloc;
-    u64 alloc;
-    u64 base;
+    u64 entry;      // starting address of the executable section of the guest program (pc entry)
+                    // in guest memory space
+    u64 host_alloc; // stores the upper boundary of the malloced memory space in host view
+    u64 base;       // base is the guest view of host_alloc (host_alloc mapped to guest memory space)
+    u64 alloc;      // alloc stores the upper boundary of the malloced memory space
 } mmu_t;
 
 /**
@@ -165,5 +168,12 @@ void machine_load_program(machine_t *, char *);
 void inst_decode(inst_t *inst, u32 data);
 void exec_block_interp(state_t *state);
 enum exit_reason_t machine_step(machine_t *m);
+u64 mmu_alloc(mmu_t *, i64);
+void machine_setup(machine_t *, int, char**);
+
+inline void mmu_write(u64 addr, u8 *data, size_t len) {
+    memcpy((void *) TO_HOST(addr), (void *) data, len);
+}
+
 
 #endif
