@@ -21,6 +21,7 @@
 #include "elfdef.h"
 #include "reg.h"
 #include "csr.h"
+#include "syscall.h"
 
 //////////////////////////////////
 // Macros
@@ -30,7 +31,7 @@
 #define fatalf(fmt, ...) (fprintf(stderr, "fatal: %s:%d " fmt "\n", __FILE__, __LINE__, __VA_ARGS__), exit(1))
 #define fatal(msg) fatalf("%s", msg)
 #define unreachable() (fatal("unreachable"), __builtin_unreachable())
-#define warning(msg) printf("%s\n", msg)
+#define warning(msg) printf("Warning: %s\n", msg)
 
 // Bit manipulation
 #define ROUNDDOWN(x, y)     ((x) & -(y))
@@ -142,6 +143,7 @@ void exec_block_interp(state_t *state);
 enum exit_reason_t machine_step(machine_t *m);
 u64 mmu_alloc(mmu_t *, i64);
 void machine_setup(machine_t *, int, char**);
+u64 do_syscall(machine_t *, u64);
 
 //////////////////////////////////
 // Inline Function

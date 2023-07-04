@@ -7,11 +7,11 @@ OBJS=$(patsubst src/%.c, obj/%.o, $(SRCS))
 CC=clang
 
 rvemu: $(OBJS)
-	$(CC) $(CFLAGS) -lm -o $@ $^ $(LDFLASGS)
+	$(CC) $(CFLAGS) -lm -o $@ $^ $(LDFLASGS) -g
 
 $(OBJS): obj/%.o: src/%.c $(HDRS)
 	@mkdir -p $$(dirname $@)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $< -g
 
 clean:
 	rm -rf rvemu obj/
