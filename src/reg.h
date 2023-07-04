@@ -1,3 +1,6 @@
+#ifndef _REG_H_
+#define _REG_H_
+
 // general purpose registers in RISCV
 enum gp_reg_type_t {
     zero, ra, sp, gp, tp,
@@ -8,3 +11,5 @@ enum gp_reg_type_t {
     t3, t4, t5, t6,
     num_gp_regs,
 };
+
+#endif

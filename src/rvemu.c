@@ -17,12 +17,8 @@ int main (int argc, char **argv) {
         u64 syscall = machine_get_gp_reg(&machine, a7);
         u64 ret = do_syscall(&machine, syscall);
         machine_set_gp_reg(&machine, a0, ret);
-
         machine.state.exit_reason = none; // reset the exit_reason
     }
 
-    printf("ELF info (in host memory space)\n");
-    printf("entry: %llx\n", TO_HOST(machine.mmu.entry));
-    printf("host_alloc: %lx\n", machine.mmu.host_alloc);
     return 0;
 }

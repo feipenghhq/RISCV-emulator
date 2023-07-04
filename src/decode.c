@@ -37,13 +37,13 @@
 // Read page 16 of RISC-V Unprivileged ISA V20191213
 
 // Macros to help extract the immediate values from instruction
-#define IMM_MASK(imm_h, imm_l) ((1 << ((imm_h) - (imm_l) + 1)) - 1)
+#define IMM_MASK(imm_h, imm_l, inst_l) (((1 << ((imm_h) - (imm_l) + 1)) - 1) << inst_l)
 // Extract immediate values from instruction and do an unsigned extension
 #define EXTRACT_IMM_UNSIGNED(inst, imm_h, imm_l, inst_l) \
-    (((u32) (inst >> (inst_l)) & IMM_MASK(imm_h, imm_l)) << (imm_l))
+    ((u32) (inst & IMM_MASK(imm_h, imm_l, inst_l)) >> (inst_l)) << (imm_l)
 // Extract immediate values from instruction and do a signed extension
 #define EXTRACT_IMM_SIGNED(inst, imm_h, imm_l, inst_l) \
-    (((i32) (inst >> (inst_l)) & IMM_MASK(imm_h, imm_l)) << (imm_l))
+    ((i32) (inst & IMM_MASK(imm_h, imm_l, inst_l)) >> (inst_l)) << (imm_l)
 
 // Macros for invalid instructions
 #define INVALID_INST() fatalf("Invalid Instruction: %x", raw_inst)
@@ -72,6 +72,7 @@ static inline inst_t inst_r_type(u32 inst) {
 static inline inst_t inst_i_type(u32 inst) {
     i32 imm = 0;
     imm = imm | EXTRACT_IMM_SIGNED(inst, 11, 0, 20);   // imm[11:0] -> inst[31:20] - 12 bits
+    //printf("imm1 = %x\n", imm);
     return (inst_t) {
         .imm = imm,
         .rs1 = RS1(inst),
@@ -599,7 +600,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                 }
 
                 case 0x6: {
-                    *inst = inst_s_type(raw_inst);
+                    *inst = inst_i_type(raw_inst);
                     switch (funct3) {
                         case 0x0: inst->type = inst_addiw; return;  // RV64I - ADDIW
                         case 0x1: inst->type = inst_slliw; return;  // RV64I - SLLIW
@@ -666,6 +667,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                 }
 
                 case 0xE: {
+                    *inst = inst_r_type(raw_inst);
                     switch (funct3) {
                         case 0x0: {
                             if      (funct7 == 0x0)  {inst->type = inst_addw; return;} // RV64I - ADDW

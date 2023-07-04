@@ -3,6 +3,28 @@
 typedef void (func_t)(state_t *, inst_t *);
 
 /////////////////////////////////////////
+// debug related helper macro/functions
+/////////////////////////////////////////
+#ifdef DEBUG
+
+#define _printreg(name, reg) printf("DEBUG: register %s = %lx\n", name, state->gp_regs[reg])
+#define _printimm() printf("DEBUG: imm = %x\n", inst.imm)
+
+const char *gp_reg_name[] = {
+    "zero", "ra", "sp", "gp", "tp",
+    "t0", "t1", "t2",
+    "s0", "s1",
+    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
+    "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11",
+    "t3", "t4", "t5", "t6"
+};
+
+#define printreg(pcval, reg) if (state->pc == (pcval)) _printreg(gp_reg_name[reg], reg);
+#define printimm(pcval) if (state->pc == (pcval)) _printimm();
+
+#endif
+
+/////////////////////////////////////////
 // Functions to execute instruction
 /////////////////////////////////////////
 
@@ -13,7 +35,7 @@ typedef void (func_t)(state_t *, inst_t *);
     #define FUNC(expr) \
         i64 rs1 = state->gp_regs[inst->rs1]; \
         i64 imm = (i64) inst->imm; \
-        state->gp_regs[inst->rd] = (i64) (expr); \
+        state->gp_regs[inst->rd] = (expr); \
 
     // addi instruction
     static void exec_addi(state_t *state, inst_t *inst) {
@@ -45,9 +67,9 @@ typedef void (func_t)(state_t *, inst_t *);
         FUNC(rs1 ^ imm);
     }
 
-    // addi instruction
+    // addiw instruction
     static void exec_addiw(state_t *state, inst_t *inst) {
-        FUNC(rs1 + imm);
+        FUNC((i64)(i32)(rs1 + imm));
     }
 
     // slli instruction
@@ -67,17 +89,17 @@ typedef void (func_t)(state_t *, inst_t *);
 
     // slliw instruction
     static void exec_slliw(state_t *state, inst_t *inst) {
-        FUNC((i32) rs1 << (imm & 0x1F));
+        FUNC((i64)(i32)(rs1 << (imm & 0x1F)));
     }
 
     // srliw instruction
     static void exec_srliw(state_t *state, inst_t *inst) {
-        FUNC((u32) rs1 >> (imm & 0x1F));
+        FUNC((i64)(i32)((u32) rs1 >> (imm & 0x1F)));
     }
 
     // sraiw instruction
     static void exec_sraiw(state_t *state, inst_t *inst) {
-        FUNC((i32) rs1 >> (imm & 0x1F));
+        FUNC((i64)(i32)((i32) rs1 >> (imm & 0x1F)));
     }
 
     #undef FUNC
@@ -130,12 +152,12 @@ typedef void (func_t)(state_t *, inst_t *);
 
     // addw instruction
     static void exec_addw(state_t *state, inst_t *inst) {
-        FUNC((i32) rs1 + (i32) rs2);
+        FUNC((i64)(i32)(rs1 + rs2));
     }
 
     // subw instruction
     static void exec_subw(state_t *state, inst_t *inst) {
-        FUNC((i32) rs1 - (i32) rs2);
+        FUNC((i64)(i32)(rs1 - rs2));
     }
 
     // sll instruction
@@ -145,27 +167,27 @@ typedef void (func_t)(state_t *, inst_t *);
 
     // srl instruction
     static void exec_srl(state_t *state, inst_t *inst) {
-        FUNC((u64) rs1 << (rs2 & 0x3F));
+        FUNC((u64) rs1 >> (rs2 & 0x3F));
     }
 
     // sra instruction
     static void exec_sra(state_t *state, inst_t *inst) {
-        FUNC(rs1 << (rs2 & 0x3F));
+        FUNC(rs1 >> (rs2 & 0x3F));
     }
 
     // sllw instruction
     static void exec_sllw(state_t *state, inst_t *inst) {
-        FUNC((u32) rs1 << (rs2 & 0x1F));
+        FUNC((i64)(i32)((u32) rs1 << (rs2 & 0x1F)));
     }
 
     // srlw instruction
     static void exec_srlw(state_t *state, inst_t *inst) {
-        FUNC((u32) rs1 << (rs2 & 0x1F));
+        FUNC((i64)(i32)((u32) rs1 >> (rs2 & 0x1F)));
     }
 
     // sraw instruction
     static void exec_sraw(state_t *state, inst_t *inst) {
-        FUNC((i32) rs1 << (rs2 & 0x1F));
+        FUNC((i64)(i32)((i32) rs1 >> (rs2 & 0x1F)));
     }
 
     // mul instruction
@@ -210,7 +232,7 @@ typedef void (func_t)(state_t *, inst_t *);
 
     // mulw instruction
     static void exec_mulw(state_t *state, inst_t *inst) {
-        FUNC((i32) rs1 * (i32) rs2);
+        FUNC((i64)(i32)(rs1 * rs2));
     }
 
     // divw instruction
@@ -254,22 +276,24 @@ typedef void (func_t)(state_t *, inst_t *);
     // Jump type instructions
     /////////////////////////////////////////
 
-    #define FUNC(expr) \
-        state->gp_regs[inst->rd] = state->pc + 4; \
+    #define FUNC(expr, inst) \
+        state->gp_regs[inst->rd] = state->pc + ((inst->rvc) ? 2 : 4); \
         state->exit_reason = direct_branch; \
         state->reenter_pc = (expr); \
         if ((state->reenter_pc & 0x3) != 0) { \
+            fatal("instruction_address_misaligned"); \
             state->raise_exception = true; \
             state->exception_code = instruction_address_misaligned; \
         } \
 
 
     static void exec_jal(state_t *state, inst_t *inst) {
-        FUNC(state->pc + (i64) inst->imm);
+        FUNC(state->pc + (i64) inst->imm, inst);
     }
 
     static void exec_jalr(state_t *state, inst_t *inst) {
-        FUNC((state->gp_regs[inst->rs1] + (i64) inst->imm) & 0xFFFFFFFFFFFFFFFE);
+        u64 rs1 = state->gp_regs[inst->rs1];
+        FUNC((rs1 + (i64) inst->imm) & ~(u64)1, inst);
     }
 
     #undef FUNC
@@ -679,11 +703,7 @@ void exec_block_interp(state_t *state) {
         // decode the instruction
         inst_decode(&inst, raw_inst);
 
-        #ifdef DEBUG
-            printf("Current PC: %llx. ", TO_HOST(state->pc));
-            printf("Current Instruction: %lx. ", raw_inst);
-            printf("Decoded Instruction: %d.\n", inst.type);
-        #endif
+
 
         // execute the instruction
         funcs[inst.type](state, &inst);
@@ -691,6 +711,23 @@ void exec_block_interp(state_t *state) {
 
         // revert back register zero value.
         state->gp_regs[zero] = 0;
+
+        // per instruction debug
+        #ifdef DEBUG
+            printf("Current PC: %lx. ", state->pc);
+            printf("Current Instruction 64: %16lx. ", raw_inst);
+            printf("Current Instruction 32: %8x. ",(u32) raw_inst);
+            printf("Decoded Instruction: %d.\n", inst.type);
+
+            // Add more debug code if needed
+            printreg(0x800001ac, ra);
+            printreg(0x800001b0, sp);
+            printreg(0x800001b4, ra);
+            printreg(0x800001b4, sp);
+            printreg(0x800001b4, a4);
+
+        #endif
+
 
         if (inst.cont) break;
 

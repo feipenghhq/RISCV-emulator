@@ -31,6 +31,7 @@
 #define fatalf(fmt, ...) (fprintf(stderr, "fatal: %s:%d " fmt "\n", __FILE__, __LINE__, __VA_ARGS__), exit(1))
 #define fatal(msg) fatalf("%s", msg)
 #define unreachable() (fatal("unreachable"), __builtin_unreachable())
+
 #define warning(msg) printf("Warning: %s\n", msg)
 
 // Bit manipulation
@@ -45,7 +46,7 @@
 #define TO_HOST(addr)   ((addr) + GUEST_MEMORY_OFFSET)
 
 #define STACK_SIZE          32 * 1024 * 1024
-//#define DEBUG
+#define DEBUG
 
 //////////////////////////////////
 // Structs
