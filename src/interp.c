@@ -283,9 +283,11 @@ typedef void (func_t)(state_t *, inst_t *);
         if (result) { \
             state->exit_reason = indirect_branch; \
             state->reenter_pc = state->pc + (i64) inst->imm; \
+            inst->cont = true; \
             if ((state->reenter_pc & 0x3) != 0) { \
                 state->raise_exception = true; \
                 state->exception_code = instruction_address_misaligned; \
+                warning("Exception: instruction_address_misaligned"); \
             } \
         } \
 
@@ -386,49 +388,49 @@ typedef void (func_t)(state_t *, inst_t *);
     // Zicsr instructions
     /////////////////////////////////////////
 
-    #define FUNC(cond, expr) \
-        i64 rs1 = state->gp_regs[inst->rs1]; \
-        u64 csr = (u64) state->csr[inst->csr]; \
-        if (cond != 0) { \
-            state->gp_regs[inst->rd] = csr; \
-            state->csr[inst->csr] = (expr); \
-        } \
-
     static void exec_csrrw(state_t *state, inst_t *inst) {
-        FUNC(inst->rd, rs1);
+        i64 rs1 = state->gp_regs[inst->rs1];
+        u64 csr = (u64) state->csr[inst->csr];
+        if (inst->rd) state->gp_regs[inst->rd] = csr;
+        state->csr[inst->csr] = rs1;
     }
 
     static void exec_csrrs(state_t *state, inst_t *inst) {
-        FUNC(inst->rs1, csr | rs1);
+        i64 rs1 = state->gp_regs[inst->rs1];
+        u64 csr = (u64) state->csr[inst->csr];
+        state->gp_regs[inst->rd] = csr;
+        if (inst->rs1 != 0) {
+            state->csr[inst->csr] = csr | rs1;
+        }
     }
 
     static void exec_csrrc(state_t *state, inst_t *inst) {
-        FUNC(inst->rs1, csr & ~rs1);
+        i64 rs1 = state->gp_regs[inst->rs1];
+        u64 csr = (u64) state->csr[inst->csr];
+        state->gp_regs[inst->rd] = csr;
+        if (inst->rs1 != 0) state->csr[inst->csr] = csr & ~rs1;
     }
 
-    #undef FUNC
-
-    #define FUNC(cond, expr) \
-        u64 csr = (u64) state->csr[inst->csr]; \
-        u32 imm = inst->imm; \
-        if (cond != 0) { \
-            state->gp_regs[inst->rd] = csr; \
-            state->csr[inst->csr] = (expr); \
-        } \
-
     static void exec_csrrwi(state_t *state, inst_t *inst) {
-        FUNC(inst->rd, imm);
+        u64 csr = (u64) state->csr[inst->csr];
+        u32 imm = inst->imm;
+        if (inst->rd != 0) state->gp_regs[inst->rd] = csr;
+        state->csr[inst->csr] = imm;
     }
 
     static void exec_csrrsi(state_t *state, inst_t *inst) {
-        FUNC(imm, csr | imm);
+        u64 csr = (u64) state->csr[inst->csr];
+        u32 imm = inst->imm;
+        if (imm != 0) state->csr[inst->csr] = csr | imm;
+        state->gp_regs[inst->rd] = csr;
     }
 
     static void exec_csrrci(state_t *state, inst_t *inst) {
-        FUNC(imm, csr & ~imm);
+        u64 csr = (u64) state->csr[inst->csr];
+        u32 imm = inst->imm;
+        if (imm != 0) state->csr[inst->csr] = csr & ~imm;
+        state->gp_regs[inst->rd] = csr;
     }
-
-    #undef FUNC
 
     /////////////////////////////////////////
     // RVC Instructions
@@ -583,7 +585,35 @@ typedef void (func_t)(state_t *, inst_t *);
     }
 
     static void exec_cadd(state_t *state, inst_t *inst) {
-        state->gp_regs[inst->rd] = state->gp_regs[inst->rs2] + state->gp_regs[inst->rd];
+        state->gp_regs[inst->rd] = state->gp_regs[inst->rd] + state->gp_regs[inst->rs2];
+    }
+
+    static void exec_cand(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = state->gp_regs[inst->rd] & state->gp_regs[inst->rs2];
+    }
+
+    static void exec_cor(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = state->gp_regs[inst->rd] | state->gp_regs[inst->rs2];
+    }
+
+    static void exec_cxor(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = state->gp_regs[inst->rd] ^ state->gp_regs[inst->rs2];
+    }
+
+    static void exec_csub(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = state->gp_regs[inst->rd] ^ state->gp_regs[inst->rs2];
+    }
+
+    static void exec_caddw(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = (i64) ((i32) state->gp_regs[inst->rd] + (i32) state->gp_regs[inst->rs2]);
+    }
+
+    static void exec_csubw(state_t *state, inst_t *inst) {
+        state->gp_regs[inst->rd] = (i64) ((i32) state->gp_regs[inst->rd] - (i32) state->gp_regs[inst->rs2]);
+    }
+
+    static void exec_cnop(state_t *state, inst_t *inst) {
+        // Do nothing
     }
 
     /////////////////////////////////////////
@@ -605,7 +635,7 @@ typedef void (func_t)(state_t *, inst_t *);
     /////////////////////////////////////////
 
     static void exec_fence(state_t *state, inst_t *inst) {
-        fatal("unimplemented FENCE instructions");
+        warning("unimplemented FENCE instructions");
     }
 
     static void exec_ecall(state_t *state, inst_t *inst) {
@@ -623,107 +653,7 @@ typedef void (func_t)(state_t *, inst_t *);
 /////////////////////////////////////////
 
 static func_t *funcs[] = {
-    exec_lui,
-    exec_auipc,
-    exec_jal,
-    exec_jalr,
-    exec_beq,
-    exec_bne,
-    exec_blt,
-    exec_bge,
-    exec_bltu,
-    exec_bgeu,
-    exec_lb,
-    exec_lh,
-    exec_lw,
-    exec_lbu,
-    exec_lhu,
-    exec_sb,
-    exec_sh,
-    exec_sw,
-    exec_add,
-    exec_slt,
-    exec_sltu,
-    exec_addi,
-    exec_slti,
-    exec_sltiu,
-    exec_xori,
-    exec_ori,
-    exec_andi,
-    exec_slli,
-    exec_srli,
-    exec_srai,
-    exec_add,
-    exec_sub,
-    exec_sll,
-    exec_slt,
-    exec_sltu,
-    exec_xor,
-    exec_srl,
-    exec_sra,
-    exec_or,
-    exec_and,
-    exec_fence,
-    exec_ecall,
-    exec_ebreak,
-    exec_lwu,
-    exec_ld,
-    exec_sd,
-    exec_addiw,
-    exec_slliw,
-    exec_srliw,
-    exec_sraiw,
-    exec_addw,
-    exec_subw,
-    exec_sllw,
-    exec_srlw,
-    exec_sraw,
-    exec_mul,
-    exec_mulh,
-    exec_mulhsu,
-    exec_mulhu,
-    exec_div,
-    exec_divu,
-    exec_rem,
-    exec_remu,
-    exec_mulw,
-    exec_divw,
-    exec_divuw,
-    exec_remw,
-    exec_remuw,
-    exec_csrrw,
-    exec_csrrs,
-    exec_csrrc,
-    exec_csrrwi,
-    exec_csrrsi,
-    exec_csrrci,
-    exec_clwsp,
-    exec_cldsp,
-    exec_cswsp,
-    exec_csdsp,
-    exec_clw,
-    exec_cld,
-    exec_csw,
-    exec_csd,
-    exec_cj,
-    exec_cjr,
-    exec_cjalr,
-    exec_cbeqz,
-    exec_cbnez,
-    exec_cli,
-    exec_clui,
-    exec_caddi,
-    exec_caddiw,
-    exec_caddi16sp,
-    exec_caddi4spn,
-    exec_cslli,
-    exec_csrli,
-    exec_csrai,
-    exec_candi,
-    exec_cmv,
-    exec_cadd,
-
-    exec_mret,
+#include "funcs.h"
 };
 
 /////////////////////////////////////////
@@ -748,6 +678,12 @@ void exec_block_interp(state_t *state) {
 
         // decode the instruction
         inst_decode(&inst, raw_inst);
+
+        #ifdef DEBUG
+            printf("Current PC: %llx. ", TO_HOST(state->pc));
+            printf("Current Instruction: %lx. ", raw_inst);
+            printf("Decoded Instruction: %d.\n", inst.type);
+        #endif
 
         // execute the instruction
         funcs[inst.type](state, &inst);

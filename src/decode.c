@@ -184,6 +184,9 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
     u8 c_funct3 = C_FUNCT3(raw_inst);
     u8 c_funct_6_5 = C_FUNCT_6_5(raw_inst);
 
+    // reset the cont to 0
+    inst->cont = 0;
+
     switch(quadrant) {
         case 0x0: {
             inst->rvc = true;
@@ -402,6 +405,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
 
                 case 0x5: { // RVC - C.J
                     inst->type = inst_cj;
+                    inst->cont = true;
                     inst->imm = 0;
                     inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 11, 11, 12);
                     inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 4, 11);
@@ -416,6 +420,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
 
                 case 0x6: { // RVC - C.BEQZ
                     inst->type = inst_cbeqz;
+                    inst->cont = true;
                     inst->rs1 = C_RS1_(raw_inst);
                     inst->imm = 0;
                     inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 8, 8, 12);
@@ -428,6 +433,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
 
                 case 0x7: { // RVC - C.BNEZ
                     inst->type = inst_cbnez;
+                    inst->cont = true;
                     inst->rs1 = C_RS1_(raw_inst);
                     inst->imm = 0;
                     inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 8, 8, 12);
@@ -491,6 +497,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                     u8 inst_12 = (raw_inst >> 12) & 0x1;
                     if (inst_12 == 0 && rs1 != 0 && rs2 == 0) { // RVC - C.JR
                         inst->type = inst_cjr;
+                        inst->cont = true;
                         inst->rs1 = rs1;
                     }
                     else if (inst_12 == 0 && rd != 0 && rs2 != 0) { // RVC - C.MV
@@ -500,6 +507,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                     }
                     else if (inst_12 == 1 && rs1 != 0 && rs2 == 0) { // RVC - C.JALR
                         inst->type = inst_cjalr;
+                        inst->cont = true;
                         inst->rs1 = rs1;
                     }
                     else if (inst_12 == 1 && rd != 0 && rs2 != 0) { // RVC - C.ADD
@@ -701,12 +709,14 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                 case 0x19: { // RV32I - JALR
                     *inst = inst_i_type(raw_inst);
                     inst->type = inst_jalr;
+                    inst->cont = true;
                     return;
                 }
 
                 case 0x1B: { // RV32I - JAL
                     *inst = inst_j_type(raw_inst);
                     inst->type = inst_jal;
+                    inst->cont = true;
                     return;
                 }
 
@@ -714,17 +724,17 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
 
                     switch (funct3) {
                         case 0x0: {
-                            if      (inst_31_20 == 0x0) {inst->type = inst_ecall; return;}  // RV32I - ECALL
-                            else if (inst_31_20 == 0x1) {inst->type = inst_ebreak; return;} // RV32I - EBREAK
-                            else if (inst_31_20 == 0x302) {inst->type = inst_mret; return;} // Trap - MRET
+                            if      (inst_31_20 == 0x0)   {inst->type = inst_ecall;  inst->cont = true; return;}  // RV32I - ECALL
+                            else if (inst_31_20 == 0x1)   {inst->type = inst_ebreak; inst->cont = true; return;} // RV32I - EBREAK
+                            else if (inst_31_20 == 0x302) {inst->type = inst_mret;   inst->cont = true; return;} // Trap - MRET
                             else                        {UNIMPL_INST();}
                         }
-                        case 0x1: {inst->type = inst_csrrw;  *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRW
-                        case 0x2: {inst->type = inst_csrrs;  *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRS
-                        case 0x3: {inst->type = inst_csrrc;  *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRC
-                        case 0x5: {inst->type = inst_csrrwi; *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRWI
-                        case 0x6: {inst->type = inst_csrrsi; *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRSI
-                        case 0x7: {inst->type = inst_csrrci; *inst = inst_csr_type(raw_inst); return;}  // Zicsr - CSRRCI
+                        case 0x1: {*inst = inst_csr_type(raw_inst); inst->type = inst_csrrw;  return;}  // Zicsr - CSRRW
+                        case 0x2: {*inst = inst_csr_type(raw_inst); inst->type = inst_csrrs;  return;}  // Zicsr - CSRRS
+                        case 0x3: {*inst = inst_csr_type(raw_inst); inst->type = inst_csrrc;  return;}  // Zicsr - CSRRC
+                        case 0x5: {*inst = inst_csr_type(raw_inst); inst->type = inst_csrrwi; return;}  // Zicsr - CSRRWI
+                        case 0x6: {*inst = inst_csr_type(raw_inst); inst->type = inst_csrrsi; return;}  // Zicsr - CSRRSI
+                        case 0x7: {*inst = inst_csr_type(raw_inst); inst->type = inst_csrrci; return;}  // Zicsr - CSRRCI
                         default: INVALID_INST();
                     }
 

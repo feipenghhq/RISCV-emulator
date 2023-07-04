@@ -13,17 +13,22 @@ enum exit_reason_t machine_step(machine_t *m) {
 
         // continue execution if it is indirect branch or direct branch
         if (m->state.exit_reason == indirect_branch || m->state.exit_reason == direct_branch) {
-            m->state.exit_reason = none;    // reset the exit_reason
+            m->state.exit_reason = none;
+            m->state.pc = m->state.reenter_pc;
             continue;
         }
 
         // continue execution if it is mret
         if (m->state.exit_reason == mret) {
-            m->state.exit_reason = none;    // reset the exit_reason
+            m->state.exit_reason = none;
+            m->state.pc = m->state.reenter_pc;
             continue;
         }
 
         // break on ecall.
+        #ifdef DEBUG
+        printf("exit_reason: %d\n", m->state.exit_reason);
+        #endif
         assert(m->state.exit_reason == ecall);
         break;
     }

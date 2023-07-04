@@ -30,6 +30,7 @@
 #define fatalf(fmt, ...) (fprintf(stderr, "fatal: %s:%d " fmt "\n", __FILE__, __LINE__, __VA_ARGS__), exit(1))
 #define fatal(msg) fatalf("%s", msg)
 #define unreachable() (fatal("unreachable"), __builtin_unreachable())
+#define warning(msg) printf("%s\n", msg)
 
 // Bit manipulation
 #define ROUNDDOWN(x, y)     ((x) & -(y))
@@ -43,6 +44,7 @@
 #define TO_HOST(addr)   ((addr) + GUEST_MEMORY_OFFSET)
 
 #define STACK_SIZE          32 * 1024 * 1024
+//#define DEBUG
 
 //////////////////////////////////
 // Structs
@@ -102,37 +104,7 @@ typedef struct {
  *
  */
 enum inst_type_t {
-    // RV32I/RV64I Base Instruction Set
-    inst_lui, inst_auipc,
-    inst_jal, inst_jalr, inst_beq, inst_bne, inst_blt, inst_bge, inst_bltu, inst_bgeu,
-    inst_lb, inst_lh, inst_lw, inst_lbu, inst_lhu,
-    inst_sb, inst_sh, inst_sw,
-    inst_addi, inst_slti, inst_sltiu, inst_xori, inst_ori, inst_andi,
-    inst_slli, inst_srli, inst_srai,
-    inst_add, inst_sub, inst_sll, inst_slt, inst_sltu, inst_xor, inst_srl, inst_sra, inst_or, inst_and,
-    inst_fence, inst_ecall, inst_ebreak,
-    inst_lwu, inst_ld, inst_sd,
-    inst_addiw, inst_slliw, inst_srliw, inst_sraiw,
-    inst_addw, inst_subw, inst_sllw, inst_srlw, inst_sraw,
-    // RV32M/RV64M
-    inst_mul, inst_mulh, inst_mulhsu, inst_mulhu,
-    inst_div, inst_divu, inst_rem, inst_remu,
-    inst_mulw, inst_divw, inst_divuw, inst_remw, inst_remuw,
-    // "Zicsr"
-    inst_csrrw, inst_csrrs, inst_csrrc, inst_csrrwi, inst_csrrsi, inst_csrrci,
-    // RVC instructions
-    inst_clwsp, inst_cldsp, inst_cswsp, inst_csdsp,
-    inst_clw, inst_cld, inst_csw, inst_csd,
-    inst_cj, inst_cjr, inst_cjalr,
-    inst_cbeqz, inst_cbnez,
-    inst_cli, inst_clui,
-    inst_caddi, inst_caddiw, inst_caddi16sp, inst_caddi4spn, inst_cslli, inst_csrli, inst_csrai, inst_candi,
-    inst_cmv, inst_cadd, inst_cand, inst_cor, inst_cxor, inst_csub, inst_caddw, inst_csubw,
-    inst_cnop,
-    // Trap-Return Instructions
-    inst_mret,
-    // Numbered instructions
-    num_insts,
+#include "inst_type_t.h"
 };
 
 /**
@@ -171,8 +143,22 @@ enum exit_reason_t machine_step(machine_t *m);
 u64 mmu_alloc(mmu_t *, i64);
 void machine_setup(machine_t *, int, char**);
 
+//////////////////////////////////
+// Inline Function
+//////////////////////////////////
+
 inline void mmu_write(u64 addr, u8 *data, size_t len) {
     memcpy((void *) TO_HOST(addr), (void *) data, len);
+}
+
+inline u64 machine_get_gp_reg(machine_t *m, i32 reg) {
+    assert(reg >= 0 && reg <= num_gp_regs);
+    return m->state.gp_regs[reg];
+}
+
+inline void machine_set_gp_reg(machine_t *m, i32 reg, u64 data) {
+    assert(reg >= 0 && reg <= num_gp_regs);
+    m->state.gp_regs[reg] = data;
 }
 
 
