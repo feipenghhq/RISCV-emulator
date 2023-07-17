@@ -2,6 +2,12 @@
 // CSR register
 ////////////////////////////////////
 
+
+// Unprivileged Floating-Point CSRs
+#define  fflags         0x001
+#define  frm            0x002
+#define  fcsr           0x003
+
 // Machine Trap Setup
  #define mstatus_id     0x300
  #define misa_id        0x301
@@ -26,7 +32,7 @@
 ////////////////////////////////////
 
 // Helper macro
-#define csr_gen_mask64(data, pos)       ((u64) (data) << (pos))
+#define csr_gen_mask64(mask, pos)       ((u64) (mask) << (pos))
 #define csr_set_field(reg, data, mask)  ((reg) & ~(mask) | ((data) & (mask)))
 #define csr_get_field(reg, pos, mask)   (((reg) & (mask)) >> (pos))
 #define csr_mask_name(csr, field)       (csr ## _ ## field ## _mask)

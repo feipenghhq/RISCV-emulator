@@ -85,6 +85,8 @@ typedef struct {
     u64 gp_regs[num_gp_regs];   // RISCV 32 general purpose registers
     u64 csr[4096];              // 4096 CSR registers
 
+    fp_reg_t fp_regs[num_fp_regs];   // RISCV 32 float point registers
+
     u64 pc;                     // Program counter
     u64 reenter_pc;             // Re-enter Program counter
 
@@ -125,6 +127,7 @@ typedef struct {
     i8 rd;
     i8 rs1;
     i8 rs2;
+    i8 rs3;
     i32 imm;
     i16 csr;
     enum inst_type_t type;

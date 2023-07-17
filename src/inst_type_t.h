@@ -1,4 +1,4 @@
-inst_lui, // RV32I/RV64I Base Instruction Set
+inst_lui,       // RV32I/RV64I Base Instruction Set
 inst_auipc,
 inst_jal,
 inst_jalr,
@@ -50,7 +50,7 @@ inst_subw,
 inst_sllw,
 inst_srlw,
 inst_sraw,
-inst_mul, // RV32M/RV64M
+inst_mul,       // RV32M/RV64M
 inst_mulh,
 inst_mulhsu,
 inst_mulhu,
@@ -63,13 +63,13 @@ inst_divw,
 inst_divuw,
 inst_remw,
 inst_remuw,
-inst_csrrw, // "Zicsr"
+inst_csrrw,     // "Zicsr"
 inst_csrrs,
 inst_csrrc,
 inst_csrrwi,
 inst_csrrsi,
 inst_csrrci,
-inst_clwsp, // RVC instructions
+inst_clwsp,     // RVC instructions
 inst_cldsp,
 inst_cswsp,
 inst_csdsp,
@@ -101,5 +101,32 @@ inst_csub,
 inst_caddw,
 inst_csubw,
 inst_cnop,
-inst_mret, // Trap-Return Instructions
-num_insts, // Numbered instructions
+inst_mret,      // Trap-Return Instructions
+inst_flw,       // RV32F Instructions
+inst_fsw,
+inst_fadd_s,
+inst_fsub_s,
+inst_fmul_s,
+inst_fdiv_s,
+inst_fsqrt_s,
+inst_fmin_s,
+inst_fmax_s,
+inst_fmadd_s,
+inst_fmsub_s,
+inst_fnmsub_s,
+inst_fnmadd_s,
+inst_fld,       // RV32D Instructions
+inst_fsd,
+inst_fadd_d,
+inst_fsub_d,
+inst_fmul_d,
+inst_fdiv_d,
+inst_fsqrt_d,
+inst_fmin_d,
+inst_fmax_d,
+inst_fmadd_d,
+inst_fmsub_d,
+inst_fnmsub_d,
+inst_fnmadd_d,
+num_insts,      // Numbered Instructions
+

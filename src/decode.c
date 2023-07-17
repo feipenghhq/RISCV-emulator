@@ -1,6 +1,5 @@
 #include "rvemu.h"
 
-
 #define QUADRANT(data) (((data) >> 0) & 0x3)
 
 /////////////////////////////////////////
@@ -8,26 +7,28 @@
 /////////////////////////////////////////
 
 // ignored lower 2 bits for the opcode field
-#define OPCODE(data)    (((data) >> 2)  & 0x1F)
-#define RD(data)        (((data) >> 7)  & 0x1F)
-#define RS1(data)       (((data) >> 15) & 0x1F)
-#define RS2(data)       (((data) >> 20) & 0x1F)
-#define RS3(data)       (((data) >> 27) & 0x1F)
-#define FUNCT2(data)    (((data) >> 25) & 0x3)
-#define FUNCT3(data)    (((data) >> 12) & 0x7)
-#define FUNCT7(data)    (((data) >> 25) & 0x7F)
-#define IMM116(data)    (((data) >> 26) & 0x3F)
-#define INST31_20(data) (((data) >> 20) & 0xFFF)
-#define C_FUNCT2(data)  (((data) >> 10) & 0x3)
-#define C_FUNCT3(data)  (((data) >> 13) & 0x7)
-#define C_FUNCT4(data)  (((data) >> 12) & 0xF)
-#define C_RS1(data)     (((data) >> 7) & 0x1F)
-#define C_RS2(data)     (((data) >> 2) & 0x1F)
-#define C_RD(data)      (((data) >> 7) & 0x1F)
-#define C_RS1_(data)    (((data) >> 7) & 0x7)
-#define C_RS2_(data)    (((data) >> 2) & 0x7)
-#define C_RD_(data)     (((data) >> 2) & 0x7)
-#define C_FUNCT_6_5(data)  (((data) >> 5) & 0x3)
+#define OPCODE(data)        (((data) >> 2)  & 0x1F)
+#define RD(data)            (((data) >> 7)  & 0x1F)
+#define RS1(data)           (((data) >> 15) & 0x1F)
+#define RS2(data)           (((data) >> 20) & 0x1F)
+#define RS3(data)           (((data) >> 27) & 0x1F)
+#define FUNCT2(data)        (((data) >> 25) & 0x3)
+#define FUNCT3(data)        (((data) >> 12) & 0x7)
+#define FUNCT7(data)        (((data) >> 25) & 0x7F)
+#define IMM116(data)        (((data) >> 26) & 0x3F)
+#define INST31_20(data)     (((data) >> 20) & 0xFFF)
+#define C_FUNCT2(data)      (((data) >> 10) & 0x3)
+#define C_FUNCT3(data)      (((data) >> 13) & 0x7)
+#define C_FUNCT4(data)      (((data) >> 12) & 0xF)
+#define C_RS1(data)         (((data) >> 7) & 0x1F)
+#define C_RS2(data)         (((data) >> 2) & 0x1F)
+#define C_RD(data)          (((data) >> 7) & 0x1F)
+#define C_RS1_(data)        (((data) >> 7) & 0x7)
+#define C_RS2_(data)        (((data) >> 2) & 0x7)
+#define C_RD_(data)         (((data) >> 2) & 0x7)
+#define C_FUNCT_6_5(data)   (((data) >> 5) & 0x3)
+
+
 
 /////////////////////////////////////////
 // Functions to decode instruction
@@ -46,15 +47,12 @@
     ((i32) (inst & IMM_MASK(imm_h, imm_l, inst_l)) >> (inst_l)) << (imm_l)
 
 // Macros for invalid instructions
-#define INVALID_INST() fatalf("Invalid Instruction: %x", raw_inst)
+#define invalid_instruction() fatalf("Invalid Instruction: %x", raw_inst)
 #define UNIMPL_INST() fatalf("unimplemented. Instruction = %x", raw_inst)
 
-/**
- * @brief R type instructions
- *
- * @param inst
- * @return inst_t
- */
+
+
+// R type instructions
 static inline inst_t inst_r_type(u32 inst) {
     return (inst_t) {
         .rs1 = RS1(inst),
@@ -63,12 +61,17 @@ static inline inst_t inst_r_type(u32 inst) {
     };
 }
 
-/**
- * @brief I type instructions
- *
- * @param inst
- * @return inst_t
- */
+// R4 type instructions
+static inline inst_t inst_r4_type(u32 inst) {
+    return (inst_t) {
+        .rs1 = RS1(inst),
+        .rs2 = RS2(inst),
+        .rs3 = RS3(inst),
+        .rd = RD(inst),
+    };
+}
+
+// I type instructions
 static inline inst_t inst_i_type(u32 inst) {
     i32 imm = 0;
     imm = imm | EXTRACT_IMM_SIGNED(inst, 11, 0, 20);   // imm[11:0] -> inst[31:20] - 12 bits
@@ -80,12 +83,7 @@ static inline inst_t inst_i_type(u32 inst) {
     };
 }
 
-/**
- * @brief S type instructions
- *
- * @param inst
- * @return inst_t
- */
+// S type instructions
 static inline inst_t inst_s_type(u32 inst) {
     i32 imm = 0;
     imm = imm | EXTRACT_IMM_UNSIGNED(inst, 4, 0, 7);    // imm[4:0]  - inst[11:7]  - 5 bits
@@ -97,12 +95,8 @@ static inline inst_t inst_s_type(u32 inst) {
     };
 }
 
-/**
- * @brief B type instructions
- *
- * @param inst
- * @return inst_t
- */
+
+// B type instructions
 static inline inst_t inst_b_type(u32 inst) {
     i32 imm = 0;
     imm = imm | EXTRACT_IMM_UNSIGNED(inst, 4, 1, 8);    // imm[4:1]  - inst[11:8]  - 4 bits
@@ -116,12 +110,8 @@ static inline inst_t inst_b_type(u32 inst) {
     };
 }
 
-/**
- * @brief U type instructions
- *
- * @param inst
- * @return inst_t
- */
+
+// U type instructions
 static inline inst_t inst_u_type(u32 inst) {
     i32 imm = 0;
     imm = imm | EXTRACT_IMM_SIGNED(inst, 31, 12, 12);    // imm[31:12]  - inst[31:12]  - 20 bits
@@ -131,12 +121,8 @@ static inline inst_t inst_u_type(u32 inst) {
     };
 }
 
-/**
- * @brief J type instructions
- *
- * @param inst
- * @return inst_t
- */
+
+// J type instructions
 static inline inst_t inst_j_type(u32 inst) {
     i32 imm = 0;
     imm = imm | EXTRACT_IMM_UNSIGNED(inst, 10, 1, 21);      // imm[10:1]  - inst[30:21] - 10 bits
@@ -149,12 +135,8 @@ static inline inst_t inst_j_type(u32 inst) {
     };
 }
 
-/**
- * @brief Zicsr type instructions
- *
- * @param inst
- * @return inst_t
- */
+
+// Zicsr type instructions
 static inline inst_t inst_csr_type(u32 inst) {
     u32 imm = EXTRACT_IMM_UNSIGNED(inst, 4, 0, 15);
     return (inst_t) {
@@ -178,6 +160,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
 
     // extract different field from instructions
     u8 opcode = OPCODE(raw_inst);
+    u8 funct2 = FUNCT2(raw_inst);
     u8 funct3 = FUNCT3(raw_inst);
     u8 funct7 = FUNCT7(raw_inst);
     u16 inst_31_20 = INST31_20(raw_inst);
@@ -203,7 +186,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                     inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 2, 2, 6);
                     inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 3, 3, 5);
                     // only valid when imm != 0
-                    if (inst->imm == 0) INVALID_INST();
+                    if (inst->imm == 0) invalid_instruction();
                     break;
                 }
 
@@ -283,7 +266,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                     inst->imm = inst->imm | EXTRACT_IMM_SIGNED(raw_inst, 5, 5, 12);
                     inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 0, 2);
                     // only valid when rd != 0
-                    if (inst->rd == 0) INVALID_INST();
+                    if (inst->rd == 0) invalid_instruction();
                     break;
                 }
 
@@ -317,7 +300,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 8, 7, 3);
                         inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 2);
                         // only valid when imm != 0
-                        if (inst->imm == 0) INVALID_INST();
+                        if (inst->imm == 0) invalid_instruction();
                     }
 
                     break;
@@ -391,7 +374,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                                     switch (c_funct_6_5) {
                                         case 0x0: inst->type = inst_csubw; break; // RVC - C.SUB
                                         case 0x1: inst->type = inst_caddw; break; // RVC - C.XOR
-                                        default: INVALID_INST();
+                                        default: invalid_instruction();
                                     }
 
                                 }
@@ -476,7 +459,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                     inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 2, 4);
                     inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 7, 6, 2);
                     inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 12);
-                    if (inst->rd == 0) INVALID_INST();
+                    if (inst->rd == 0) invalid_instruction();
                     break;
                 }
 
@@ -487,7 +470,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                     inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 4, 3, 5);
                     inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 8, 6, 2);
                     inst->imm = inst->imm | EXTRACT_IMM_UNSIGNED(raw_inst, 5, 5, 12);
-                    if (inst->rd == 0) INVALID_INST();
+                    if (inst->rd == 0) invalid_instruction();
                     break;
                 }
 
@@ -566,7 +549,16 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         case 0x4: inst->type = inst_lbu; return;    // RV32I - LBU
                         case 0x5: inst->type = inst_lhu; return;    // RV32I - LHU
                         case 0x6: inst->type = inst_lwu; return;    // RV64I - LWU
-                        default: INVALID_INST();
+                        default: invalid_instruction();
+                    }
+                }
+
+
+                case 0x1: {
+                    *inst = inst_i_type(raw_inst);
+                    switch(funct3) {
+                        case 0x2: inst->type = inst_flw; return;    // RV32F - FLW
+                        case 0x3: inst->type = inst_fld; return;    // RV32D - FLD
                     }
                 }
 
@@ -589,7 +581,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                             else if (funct7 == 0x20) {inst->type = inst_srai; return;} // RV64I - SRAI
                             else                     {fatal("Not a valid itype instruction");}
                         }
-                        default: INVALID_INST();
+                        default: invalid_instruction();
                     }
                 }
 
@@ -609,7 +601,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                             else if (funct7 == 0x20) {inst->type = inst_sraiw; return;} // RV64I - SRAIW
                             else                     {fatal("Not a valid itype instruction");}
                         }
-                        default: INVALID_INST();
+                        default: invalid_instruction();
                     }
                 }
 
@@ -620,7 +612,15 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         case 0x1: inst->type = inst_sh; return;     // RV32I - SH
                         case 0x2: inst->type = inst_sw; return;     // RV32I - SW
                         case 0x3: inst->type = inst_sd; return;     // RV64I - SD
-                        default: INVALID_INST();
+                        default: invalid_instruction();
+                    }
+                }
+
+                case 0x9: {
+                    *inst = inst_s_type(raw_inst);
+                    switch(funct3) {
+                        case 0x2: inst->type = inst_fsw; return;    // RV32F - FSW
+                        case 0x3: inst->type = inst_fsd; return;    // RV32D - FSD
                     }
                 }
 
@@ -640,7 +640,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                                     case 0x5: {inst->type = inst_divu;   return;}    // RV32M - DIVU
                                     case 0x6: {inst->type = inst_rem;    return;}    // RV32M - REM
                                     case 0x7: {inst->type = inst_remu;   return;}    // RV32M - REMU
-                                    default: INVALID_INST();
+                                    default: invalid_instruction();
                                 }
                             }
                             else                     {fatal("Not a valid arithmetic instruction");}
@@ -656,7 +656,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         }
                         case 0x6: inst->type = inst_or;  return; // RV32I - OR
                         case 0x7: inst->type = inst_and; return; // RV32I - AND
-                        default: INVALID_INST();
+                        default: invalid_instruction();
                     }
                 }
 
@@ -679,19 +679,86 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                                     case 0x5: {inst->type = inst_divuw;   return;}    // RV32M - DIVUW
                                     case 0x6: {inst->type = inst_remw;    return;}    // RV32M - REMW
                                     case 0x7: {inst->type = inst_remuw;   return;}    // RV32M - REMUW
-                                    default: INVALID_INST();
+                                    default: invalid_instruction();
                                 }
                             }
-                            else                     {INVALID_INST();}
+                            else                     {invalid_instruction();}
                         }
                         case 0x1: inst->type = inst_sllw;  return; // RV64I - SLLW
                         case 0x5: {
                             if      (funct7 == 0x0)  {inst->type = inst_srlw; return;} // RV64I - SRLW
                             else if (funct7 == 0x20) {inst->type = inst_sraw; return;} // RV64I - SRAW
-                            else                     {INVALID_INST();}
+                            else                     {invalid_instruction();}
                         }
+                        default: invalid_instruction();
+                    }
+                }
 
-                        default: INVALID_INST();
+                case 0x10: {
+                    *inst = inst_r4_type(raw_inst);
+                    switch(funct2) {
+                        case 0x0: inst->type = inst_fmadd_s; return;        // RV32F - FMADD.S
+                        case 0x1: inst->type = inst_fmadd_d; return;        // RV32D - FMADD.D
+                        default: invalid_instruction();
+                    }
+                }
+
+
+                case 0x11: {
+                    *inst = inst_r4_type(raw_inst);
+                    switch(funct2) {
+                        case 0x0: inst->type = inst_fmsub_s; return;        // RV32F - FMSUB.S
+                        case 0x1: inst->type = inst_fmsub_d; return;        // RV32D - FMSUB.D
+                        default: invalid_instruction();
+                    }
+                }
+
+                case 0x12: {
+                    *inst = inst_r4_type(raw_inst);
+                    switch(funct2) {
+                        case 0x0: inst->type = inst_fnmsub_s; return;        // RV32F - FNMSUB.S
+                        case 0x1: inst->type = inst_fnmsub_d; return;        // RV32D - FNMSUB.D
+                        default: invalid_instruction();
+                    }
+                }
+
+                case 0x13: {
+                    *inst = inst_r4_type(raw_inst);
+                    switch(funct2) {
+                        case 0x0: inst->type = inst_fnmadd_s; return;        // RV32F - FNMADD.S
+                        case 0x1: inst->type = inst_fnmadd_d; return;        // RV32D - FNMADD.D
+                        default: invalid_instruction();
+                    }
+                }
+
+                case 0x14: {
+                    *inst = inst_r_type(raw_inst);
+                    switch (funct7) {
+                        case 0x0: inst->type = inst_fadd_s; return; // RV32F - FADD.S
+                        case 0x1: inst->type = inst_fadd_d; return; // RV32F - FADD.D
+                        case 0x4: inst->type = inst_fsub_s; return; // RV32F - FSUB.S
+                        case 0x5: inst->type = inst_fsub_d; return; // RV32F - FSUB.D
+                        case 0x8: inst->type = inst_fmul_s; return; // RV32F - FMUL.S
+                        case 0x9: inst->type = inst_fmul_d; return; // RV32F - FMUL.D
+                        case 0xC: inst->type = inst_fdiv_s; return; // RV32F - FDIV.S
+                        case 0xD: inst->type = inst_fdiv_d; return; // RV32F - FDIV.D
+                        case 0x14: {
+                            switch (funct3) {
+                                case 0x0: inst->type = inst_fmin_s; return; // RV32F - FMIN.S
+                                case 0x1: inst->type = inst_fmax_s; return; // RV32F - FMAX.S
+                                default: invalid_instruction();
+                            }
+                        }
+                        case 0x15: {
+                            switch (funct3) {
+                                case 0x0: inst->type = inst_fmin_d; return; // RV32F - FMIN.D
+                                case 0x1: inst->type = inst_fmax_d; return; // RV32F - FMAX.D
+                                default: invalid_instruction();
+                            }
+                        }
+                        case 0x2C: inst->type = inst_fsqrt_s; return; // RV32F - FSQRT.S
+                        case 0x2D: inst->type = inst_fsqrt_d; return; // RV32F - FSQRT.D
+                        default: invalid_instruction();
                     }
                 }
 
@@ -704,7 +771,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         case 0x5: inst->type = inst_bge; return;    // RV32I - BGE
                         case 0x6: inst->type = inst_bltu; return;   // RV32I - BLTU
                         case 0x7: inst->type = inst_bgeu; return;   // RV32I - BGEU
-                        default: INVALID_INST();
+                        default: invalid_instruction();
                     }
                 }
 
@@ -726,7 +793,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
 
                     switch (funct3) {
                         case 0x0: {
-                            if      (inst_31_20 == 0x0)   {inst->type = inst_ecall;  inst->cont = true; return;}  // RV32I - ECALL
+                            if      (inst_31_20 == 0x0)   {inst->type = inst_ecall;  inst->cont = true; return;} // RV32I - ECALL
                             else if (inst_31_20 == 0x1)   {inst->type = inst_ebreak; inst->cont = true; return;} // RV32I - EBREAK
                             else if (inst_31_20 == 0x302) {inst->type = inst_mret;   inst->cont = true; return;} // Trap - MRET
                             else                        {UNIMPL_INST();}
@@ -737,7 +804,7 @@ void inst_decode(inst_t *inst, u32 raw_inst) {
                         case 0x5: {*inst = inst_csr_type(raw_inst); inst->type = inst_csrrwi; return;}  // Zicsr - CSRRWI
                         case 0x6: {*inst = inst_csr_type(raw_inst); inst->type = inst_csrrsi; return;}  // Zicsr - CSRRSI
                         case 0x7: {*inst = inst_csr_type(raw_inst); inst->type = inst_csrrci; return;}  // Zicsr - CSRRCI
-                        default: INVALID_INST();
+                        default: invalid_instruction();
                     }
 
                 }

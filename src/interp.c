@@ -1,4 +1,6 @@
+#include <math.h>
 #include "rvemu.h"
+
 
 typedef void (func_t)(state_t *, inst_t *);
 
@@ -653,6 +655,157 @@ const char *gp_reg_name[] = {
         csr_set(mstatus, mie, state->csr[mstatus_id], mpie);
         csr_set(mstatus, mpie, state->csr[mstatus_id], 0x1);
     }
+
+    /////////////////////////////////////////
+    // RV32F Instructions
+    /////////////////////////////////////////
+
+    static void exec_flw(state_t *state, inst_t *inst) {
+        u64 addr = state->gp_regs[inst->rs1] + inst->imm;
+        state->fp_regs[inst->rd].w = *((u32 *) TO_HOST(addr));
+
+    }
+
+    static void exec_fsw(state_t *state, inst_t *inst) {
+        u64 addr = state->gp_regs[inst->rs1] + inst->imm;
+        *((u32 *) TO_HOST(addr)) = state->fp_regs[inst->rs2].w;
+    }
+
+    #define FUNC(expr) \
+        f32 rs1 = state->fp_regs[inst->rs1].f; \
+        __attribute__((unused)) f32 rs2 = state->fp_regs[inst->rs2].f; \
+        state->fp_regs[inst->rd].f = (expr);
+
+    static void exec_fadd_s(state_t *state, inst_t *inst) {
+        FUNC(rs1 + rs2);
+    }
+
+    static void exec_fsub_s(state_t *state, inst_t *inst) {
+        FUNC(rs1 - rs2);
+    }
+
+    static void exec_fmul_s(state_t *state, inst_t *inst) {
+        FUNC(rs1 * rs2);
+    }
+
+    static void exec_fdiv_s(state_t *state, inst_t *inst) {
+        FUNC(rs1 / rs2);
+    }
+
+    static void exec_fsqrt_s(state_t *state, inst_t *inst) {
+        FUNC(sqrt(rs1));
+    }
+
+    static void exec_fmin_s(state_t *state, inst_t *inst) {
+        FUNC(sqrt(rs1 < rs2 ? rs1 : rs2));
+    }
+
+    static void exec_fmax_s(state_t *state, inst_t *inst) {
+        FUNC(sqrt(rs1 > rs2 ? rs1 : rs2));
+    }
+
+    #undef FUNC
+
+
+    #define FUNC(expr) \
+        f32 rs1 = state->fp_regs[inst->rs1].f; \
+        f32 rs2 = state->fp_regs[inst->rs2].f; \
+        f32 rs3 = state->fp_regs[inst->rs3].f; \
+        state->fp_regs[inst->rd].f = (expr);
+
+    static void exec_fmadd_s(state_t *state, inst_t *inst) {
+        FUNC(sqrt((rs1 * rs2) + rs3));
+    }
+
+    static void exec_fmsub_s(state_t *state, inst_t *inst) {
+        FUNC(sqrt((rs1 * rs2) - rs3));
+    }
+
+    static void exec_fnmsub_s(state_t *state, inst_t *inst) {
+        FUNC(sqrt(-(rs1 * rs2) + rs3));
+    }
+
+
+    static void exec_fnmadd_s(state_t *state, inst_t *inst) {
+        FUNC(sqrt(-(rs1 * rs2) - rs3));
+    }
+
+    #undef FUNC
+
+    /////////////////////////////////////////
+    // RV32F Instructions
+    /////////////////////////////////////////
+
+    static void exec_fld(state_t *state, inst_t *inst) {
+        u64 addr = state->gp_regs[inst->rs1] + inst->imm;
+        state->fp_regs[inst->rd].v = *((u64 *) TO_HOST(addr));
+
+    }
+
+    static void exec_fsd(state_t *state, inst_t *inst) {
+        u64 addr = state->gp_regs[inst->rs1] + inst->imm;
+        *((u64 *) TO_HOST(addr)) = state->fp_regs[inst->rs2].v;
+    }
+
+    #define FUNC(expr) \
+        f64 rs1 = state->fp_regs[inst->rs1].d; \
+        __attribute__((unused)) f64 rs2 = state->fp_regs[inst->rs2].d; \
+        state->fp_regs[inst->rd].d = (expr);
+
+    static void exec_fadd_d(state_t *state, inst_t *inst) {
+        FUNC(rs1 + rs2);
+    }
+
+    static void exec_fsub_d(state_t *state, inst_t *inst) {
+        FUNC(rs1 - rs2);
+    }
+
+    static void exec_fmul_d(state_t *state, inst_t *inst) {
+        FUNC(rs1 * rs2);
+    }
+
+    static void exec_fdiv_d(state_t *state, inst_t *inst) {
+        FUNC(rs1 / rs2);
+    }
+
+    static void exec_fsqrt_d(state_t *state, inst_t *inst) {
+        FUNC(sqrt(rs1));
+    }
+
+    static void exec_fmin_d(state_t *state, inst_t *inst) {
+        FUNC(sqrt(rs1 < rs2 ? rs1 : rs2));
+    }
+
+    static void exec_fmax_d(state_t *state, inst_t *inst) {
+        FUNC(sqrt(rs1 > rs2 ? rs1 : rs2));
+    }
+
+    #undef FUNC
+
+    #define FUNC(expr) \
+        f64 rs1 = state->fp_regs[inst->rs1].d; \
+        f64 rs2 = state->fp_regs[inst->rs2].d; \
+        f64 rs3 = state->fp_regs[inst->rs3].d; \
+        state->fp_regs[inst->rd].d = (expr);
+
+    static void exec_fmadd_d(state_t *state, inst_t *inst) {
+        FUNC(sqrt((rs1 * rs2) + rs3));
+    }
+
+    static void exec_fmsub_d(state_t *state, inst_t *inst) {
+        FUNC(sqrt((rs1 * rs2) - rs3));
+    }
+
+    static void exec_fnmsub_d(state_t *state, inst_t *inst) {
+        FUNC(sqrt(-(rs1 * rs2) + rs3));
+    }
+
+
+    static void exec_fnmadd_d(state_t *state, inst_t *inst) {
+        FUNC(sqrt(-(rs1 * rs2) - rs3));
+    }
+
+    #undef FUNC
 
     /////////////////////////////////////////
     // MISC instructions
